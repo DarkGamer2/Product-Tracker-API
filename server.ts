@@ -9,7 +9,7 @@ import cookieParser from 'cookie-parser';
 import passport from 'passport';
 import path from "path";
 const app = express();
-const PORT=process.env.PORT||3000;
+const port=process.env.PORT||3000;
 app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({extended: true}));
@@ -109,6 +109,6 @@ app.post('/api/logout',(req:Request, res:Response) => {
     });
     res.status(200).json({ message: "User logged out successfully!" }); // Send JSON response
 });
-app.listen(port, "0.0.0.0", () => {
+app.listen(port, () => {
     console.log('Server is running on port 4040');
 });
