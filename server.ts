@@ -98,6 +98,16 @@ app.post('/api/login', (req: Request, res: Response, next: NextFunction) => {
         });
     })(req, res, next);
 });
+
+app.post('/api/logout',(req:Request, res:Response) => {
+    req.logOut((err:Error)=>{
+        if(err){
+            return res.status(500).send("Internal Server Error");
+        }
+        return res.status(200).send("User logged out successfully");
+    });
+    res.status(200).json({ message: "User logged out successfully!" }); // Send JSON response
+});
 app.listen(4040, () => {
     console.log('Server is running on port 4040');
 });

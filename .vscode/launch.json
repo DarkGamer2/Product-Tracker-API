@@ -8,7 +8,7 @@
             "type": "chrome",
             "request": "launch",
             "name": "Launch Chrome against localhost",
-            "url": "http://192.168.17.152:4040",
+            "url": "http://192.168.100.208:4040",
             "webRoot": "${workspaceFolder}"
         }
     ]
