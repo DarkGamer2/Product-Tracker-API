@@ -32,7 +32,7 @@ const products = [
   ];
 
   app.get("/",(req:Request,res:Response)=>{
-    res.sendFile(path.join(__dirname,"./pages/index.html"));
+    res.send("API is working as expected");
   })
 app.post('/api/products', (req: Request, res: Response) => {
     const product = new Product(req.body);
