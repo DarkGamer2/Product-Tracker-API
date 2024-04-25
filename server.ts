@@ -7,6 +7,7 @@ import cors from "cors";
 import expressSession from "express-session";
 import cookieParser from 'cookie-parser';
 import passport from 'passport';
+import path from "path";
 const app = express();
 
 app.use(cors());
@@ -31,7 +32,7 @@ const products = [
   ];
 
   app.get("/",(req:Request,res:Response)=>{
-    res.send(` API is active on port 4040`)
+    res.sendFile(path.join(__dirname,"./pages/index.html"));
   })
 app.post('/api/products', (req: Request, res: Response) => {
     const product = new Product(req.body);
