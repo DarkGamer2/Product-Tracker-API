@@ -24,41 +24,39 @@ require("./auth/passportConfig")(passport)
 
 app.use(cookieParser("secret_code"));
 
-const products = [
-    { barcode: '1003602101', name: 'Blue Waters', price: 10.99 },
-    { barcode: '987654321', name: 'Product B', price: 5.99 },
-    {barcode: '0474100688', name: 'Notebook', price: 5.99}
-    // Add more products as needed
-  ];
+interface Product {
+    barcode: string;
+    name: string;
+    price: number;
+  }
+  
+  const products: { [key: string]: Product } = {
+    '123456789012': { barcode: '123456789012', name: 'Product 1', price: 10 },
+    '123456789013': { barcode: '123456789013', name: 'Product 2', price: 15 },
+    '123456789014': { barcode: '123456789014', name: 'Product 3', price: 20 },
+    '123456789015': { barcode: '123456789015', name: 'Product 4', price: 25 }
+  };
+  
+  app.get('/products/:barcode', (req, res) => {
+    const { barcode } = req.params;
+    const product = products[barcode];
+    if (product) {
+      res.json(product);
+    } else {
+      res.status(404).json({ error: 'Product not found' });
+    }
+  });
 
   app.get("/",(req:Request,res:Response)=>{
     res.send("API is working as expected");
   })
-app.post('/api/products', (req: Request, res: Response) => {
-    const product = new Product(req.body);
-    product.save();
-    res.send(200);
-});
+// app.post('/api/products', (req: Request, res: Response) => {
+//     const product = new Product(req.body);
+//     product.save();
+//     res.send(200);
+// });
 
-app.get('/api/products', (req: Request, res: Response)=>{
-    const { barcode } = req.query;
-    if (!barcode) {
-      return res.status(400).json({ error: 'Barcode parameter is required' });
-    }
-  
-    // Find product with matching barcode
-    const product = products.find(product => product.barcode === barcode);
-  
-    if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
-    }
-  
-    // Return product information
-    res.json(product);
-    app.get("/api/username", (req:Request, res:Response) => {
-        // const {username}=req.userInterface;
-    })
-  });
+
 
   app.post("/api/register", async (req: Request, res: Response) => {
     try {
