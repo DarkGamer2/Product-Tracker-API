@@ -135,6 +135,36 @@ app.get('/api/customers', async (req: Request, res: Response) => {
     res.status(500).send('Error on the server.');
   }
 });
+
+app.post('/api/customers', async (req: Request, res: Response) => {
+  try {
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: req.body.email }).exec();
+    
+    if (existingUser) {
+      return res.status(400).send('User already exists.');
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+    
+    // Create a new user
+    const newUser = new User({
+      username: req.body.username,
+      password: hashedPassword,
+      email: req.body.email,
+    });
+
+    // Save the new user
+    const savedUser = await newUser.save();
+
+    // Respond with success message and user data
+    res.json({ message: 'User created successfully', user: savedUser });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error on the server.');
+  }
+});
 app.listen(port, () => {
     console.log('Server is running on port 4040');
 });
