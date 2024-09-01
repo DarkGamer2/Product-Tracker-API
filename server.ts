@@ -72,6 +72,8 @@ interface Product {
         const newUser = new User({
             username: req.body.username,
             password: hashedPassword,
+            email: req.body.email,
+            phone: req.body.phone
         });
 
         await newUser.save();
