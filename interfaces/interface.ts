@@ -4,9 +4,10 @@ export interface productInterface {
     productImage: string;
 }
 
-export interface userInterface{
-    username: string;
-    password: string;
-    email: string;
-    id:string;
+export interface userInterface {
+    username: string | null;
+    password: string | null;
+    email: string | null;
+    id: string;
 }
+

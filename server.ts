@@ -3,7 +3,7 @@ import Product from "./models/Product"
 import User from "./models/User"
 import Tab from "./models/Tab";
 import { productInterface, userInterface } from './interfaces/interface';
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import cors from "cors";
 import expressSession from "express-session";
 import cookieParser from 'cookie-parser';
@@ -110,16 +110,30 @@ app.post('/api/logout',(req:Request, res:Response) => {
     res.status(200).json({ message: "User logged out successfully!" }); // Send JSON response
 });
 
-app.get('/api/customers',async (req:Request,res:Response) => {
-  await User.find((err:Error, user:userInterface) => {
-    if (err) {
-      return res.status(500).send('Error on the server.');
+app.get('/api/customers', async (req: Request, res: Response) => {
+  try {
+    // Fetch all users
+    const users = await User.find().lean().exec();
+    
+    // Transform documents to match userInterface
+    const transformedUsers: userInterface[] = users.map(user => ({
+      username: user.username ?? null,
+      password: user.password ?? null,
+      email: user.email ?? null,
+      id: user._id.toString(), // Convert _id to string
+    }));
+    
+    if (transformedUsers.length === 0) {
+      return res.status(404).send('No users found.');
     }
-    if (!user) {
-      return res.status(404).send('User not found.');
-    }
-    res.send(user.username);
-  })
+    
+    // Send the array of users
+    res.json(transformedUsers);
+  } catch (err) {
+    // Handle errors
+    console.error(err);
+    res.status(500).send('Error on the server.');
+  }
 });
 app.listen(port, () => {
     console.log('Server is running on port 4040');

@@ -1,7 +1,7 @@
 import passport from "passport";
 import { userInterface } from "../interfaces/interface";
 import User from "../models/User";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 const localStrategy =require("passport-local").Strategy;
 
 module.exports = function(passport: any) {
