@@ -1,6 +1,7 @@
 import express, { NextFunction, Request, Response } from 'express';
 import Product from "./models/Product"
 import User from "./models/User"
+import Tab from "./models/Tab";
 import { productInterface, userInterface } from './interfaces/interface';
 import bcrypt from "bcrypt";
 import cors from "cors";
@@ -8,6 +9,7 @@ import expressSession from "express-session";
 import cookieParser from 'cookie-parser';
 import passport from 'passport';
 import path from "path";
+import mongoose from 'mongoose';
 const app = express();
 const port=process.env.PORT||3000;
 app.use(cors());
@@ -106,6 +108,18 @@ app.post('/api/logout',(req:Request, res:Response) => {
         return res.status(200).send("User logged out successfully");
     });
     res.status(200).json({ message: "User logged out successfully!" }); // Send JSON response
+});
+
+app.get('/api/customers',async (req:Request,res:Response) => {
+  await User.find((err:Error, user:userInterface) => {
+    if (err) {
+      return res.status(500).send('Error on the server.');
+    }
+    if (!user) {
+      return res.status(404).send('User not found.');
+    }
+    res.send(user.username);
+  })
 });
 app.listen(port, () => {
     console.log('Server is running on port 4040');
