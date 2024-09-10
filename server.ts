@@ -168,13 +168,23 @@ app.post('/api/customers', async (req: Request, res: Response) => {
   }
 });
 
-app.post('/api/products/addProduct', async (req:Request, res:Response) => {
+app.post('/api/products/addProduct', async (req: Request, res: Response) => {
   try {
+    // Check if user is provided if it's required
+    if (!req.body.user) {
+      return res.status(400).send('User ID is required');
+    }
+    
+    // Ensure productPrice is a number
+    req.body.productPrice = parseFloat(req.body.productPrice);
+    
+    // Create and save the product
     const product = new Product(req.body);
-    await product.save();
-    res.status(200).send(product);
-  } catch (err) {
-    res.status(500).send(err);
+    const savedProduct = await product.save();
+    res.status(200).send(savedProduct);
+  } catch (err:any) {
+    console.error('Error saving product:', err); // Improved logging
+    res.status(500).send(err.message || 'An error occurred');
   }
 });
 app.get('/api/products', async (req: Request, res: Response) => {
