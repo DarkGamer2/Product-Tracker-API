@@ -167,6 +167,15 @@ app.post('/api/customers', async (req: Request, res: Response) => {
     res.status(500).send('Error on the server.');
   }
 });
+
+app.get('/api/products', async (req: Request, res: Response) => {
+  try {
+    const products = await Product.find({}).exec();
+    res.json(products);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
 app.listen(port, () => {
     console.log('Server is running on port 4040');
 });
