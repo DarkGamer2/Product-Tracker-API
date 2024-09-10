@@ -168,6 +168,15 @@ app.post('/api/customers', async (req: Request, res: Response) => {
   }
 });
 
+app.post('/api/products/addProduct', async (req:Request, res:Response) => {
+  try {
+    const product = new Product(req.body);
+    await product.save();
+    res.status(200).send(product);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
 app.get('/api/products', async (req: Request, res: Response) => {
   try {
     const products = await Product.find({}).exec();
