@@ -176,7 +176,6 @@ app.post('/api/products/addProduct', async (req: Request, res: Response) => {
     }
     
     // Ensure productPrice is a number
-    req.body.productPrice = parseFloat(req.body.productPrice);
     
     // Create and save the product
     const product = new Product(req.body);
