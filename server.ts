@@ -182,6 +182,18 @@ app.get('/api/products', async (req: Request, res: Response) => {
     res.status(500).send(err);
   }
 });
+
+app.get('/api/users/:id', async (req: Request, res: Response) => {
+  try {
+    const user = await User.findById(req.params.id).exec();
+    if (!user) {
+      return res.status(404).send('User not found');
+    }
+    res.json(user);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
 app.listen(port, () => {
     console.log('Server is running on port 4040');
 });
