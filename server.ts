@@ -183,17 +183,27 @@ app.get('/api/products', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/users/:id', async (req: Request, res: Response) => {
+app.get('/api/users/user', async (req: Request, res: Response) => {
+  const userId = req.query.id as string; // Assuming user ID is passed as a query parameter
+
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required' });
+  }
+
   try {
-    const user = await User.findById(req.params.id).exec();
+    const user = await User.findById(userId).exec();
     if (!user) {
-      return res.status(404).send('User not found');
+      return res.status(404).json({ error: 'User not found' });
     }
     res.json(user);
-  } catch (err) {
-    res.status(500).send(err);
+  } catch (error) {
+    console.error('Error querying the database:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+app.get('/api/users/user',(req:Request,res:Response)=>{})
 app.listen(port, () => {
     console.log('Server is running on port 4040');
 });
+
