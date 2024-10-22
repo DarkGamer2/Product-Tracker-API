@@ -195,7 +195,7 @@ app.get('/api/users/:id', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/users/user', async (req: Request, res: Response) => {
+app.get('/api/users/:id', async (req: Request, res: Response) => {
   const userId = req.query.id as string; // Assuming user ID is passed as a query parameter
 
   if (!userId) {
