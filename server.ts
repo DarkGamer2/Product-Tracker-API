@@ -202,6 +202,11 @@ app.get('/api/users/user', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'User ID is required' });
   }
 
+  // Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ error: 'Invalid User ID' });
+  }
+
   try {
     const user = await User.findById(userId).exec();
     if (!user) {
