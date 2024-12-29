@@ -235,7 +235,6 @@ app.get('/api/products/:barcode', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 app.post('/api/products/:barcode', async (req: Request, res: Response) => {
   const barcode = req.params.barcode;
   const productData = req.body;
