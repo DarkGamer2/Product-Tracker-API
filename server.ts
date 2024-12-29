@@ -219,6 +219,23 @@ app.get('/api/users/:id', async (req: Request, res: Response) => {
   }
 });
 
+app.get('/api/products/:barcode', async (req: Request, res: Response) => {
+  const barcode = req.params.barcode;
+
+  try {
+    const product = await Product.findOne({ barcode: barcode });
+
+    if (product) {
+      res.json({ message: 'Product found', product });
+    } else {
+      res.status(404).json({ message: 'Product not found' });
+    }
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.post('/api/products/:barcode', async (req: Request, res: Response) => {
   const barcode = req.params.barcode;
   const productData = req.body;
