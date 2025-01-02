@@ -10,6 +10,7 @@ import cookieParser from 'cookie-parser';
 import passport from 'passport';
 import path from "path";
 import mongoose from 'mongoose';
+import Report from './models/Feedback';
 const app = express();
 const port=process.env.PORT||3000;
 app.use(cors());
@@ -252,6 +253,12 @@ app.post('/api/products/:barcode', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+app.post("/api/feedback",(req:Request,res:Response)=>{
+  const report=new Report(req.body);
+  report.save();
+  res.send(200)
+})
 app.listen(port, () => {
     console.log('Server is running on port 4040');
 });
