@@ -9,6 +9,7 @@ export interface userInterface {
     password: string | null;
     email: string | null;
     id: string;
-    isAdmin?:boolean
+    isAdmin?:boolean,
+    mobileNumber:string
 }
 

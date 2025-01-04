@@ -99,7 +99,7 @@ function adminOnly(req:Request, res:Response, next:NextFunction) {
             username: req.body.username,
             password: hashedPassword,
             email: req.body.email,
-            phone: req.body.phone
+            mobileNumber: req.body.mobileNumber
         });
 
         await newUser.save();
@@ -149,6 +149,7 @@ app.get('/api/customers', async (req: Request, res: Response) => {
       password: user.password ?? null,
       email: user.email ?? null,
       id: user._id.toString(), 
+      mobileNumber:user.mobileNumber,
       isAdmin:user.isAdmin// Convert _id to string
     }));
     

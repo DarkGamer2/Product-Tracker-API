@@ -9,7 +9,7 @@ const userSchema = new Schema({
     username: { type: String, required: true }, // Add validation
     password: { type: String, required: true },
     email: { type: String, required: true, unique: true }, // Email should be unique
-    phone: { type: String, required: true },
+    mobileNumber: { type: String, required: true },
     created_at: { type: Date, default: Date.now }, 
     isAdmin:{type:Boolean,default:false}// Set default to the current date
 });
