@@ -57,7 +57,8 @@ interface Product {
 ensureTestAdmin().catch(console.error);
 
 function adminOnly(req:Request, res:Response, next:NextFunction) {
-  if (req.isAuthenticated() && req.user?.isAdmin) {
+  const user=new User();
+  if (req.isAuthenticated() && user.isAdmin===true) {
       return next();
   } else {
       return res.status(403).json({ error: "Access denied. Admins only." });
