@@ -40,6 +40,30 @@ interface Product {
     '123456789015': { barcode: '123456789015', name: 'Product 4', price: 25 }
   };
   
+  //admin initlization
+  async function ensureTestAdmin() {
+    const testUsername = "Tester"; // Replace with your test account username
+    const testUser = await User.findOne({ username: testUsername });
+
+    if (testUser && !testUser.isAdmin) {
+        testUser.isAdmin = true;
+        await testUser.save();
+        console.log("Test user is now an admin.");
+    } else if (!testUser) {
+        console.log("Test user not found.");
+    }
+}
+
+ensureTestAdmin().catch(console.error);
+
+function adminOnly(req:Request, res:Response, next:NextFunction) {
+  if (req.isAuthenticated() && req.user?.isAdmin) {
+      return next();
+  } else {
+      return res.status(403).json({ error: "Access denied. Admins only." });
+  }
+}
+
   app.get('/products/:barcode', (req, res) => {
     const { barcode } = req.params;
     const product = products[barcode];
@@ -123,7 +147,8 @@ app.get('/api/customers', async (req: Request, res: Response) => {
       username: user.username ?? null,
       password: user.password ?? null,
       email: user.email ?? null,
-      id: user._id.toString(), // Convert _id to string
+      id: user._id.toString(), 
+      isAdmin:user.isAdmin// Convert _id to string
     }));
     
     if (transformedUsers.length === 0) {
@@ -169,7 +194,7 @@ app.post('/api/customers', async (req: Request, res: Response) => {
   }
 });
 
-app.post('/api/products/addProduct', async (req: Request, res: Response) => {
+app.post('/api/products/addProduct', adminOnly, async (req: Request, res: Response) => {
  const product=new Product(req.body);
  await product.save();
  res.json({ message: 'Product added successfully', product });

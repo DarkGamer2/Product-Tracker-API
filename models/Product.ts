@@ -8,7 +8,9 @@ const productSchema = new Schema({
   productPrice: Number,
   productImage: String,
   productDescription:String,
-  barcode:String
+  barcode:String,
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' }, // Link to Admin
+  createdAt: { type: Date, default: Date.now },
 });
 
 const Product = mongoose.model("Product", productSchema);

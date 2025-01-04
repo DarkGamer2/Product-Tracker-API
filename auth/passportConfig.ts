@@ -31,10 +31,14 @@ passport.serializeUser((user,cb)=>{
     cb(null,(user as any).id);
 })
 
-passport.deserializeUser((id, cb) => {
+passport.deserializeUser((id: string, cb: (err: any, user: Partial<userInterface> | null) => void) => {
     User.findById(id)
         .then(user => {
-            cb(null, user);
+            if (user) {
+                cb(null, { id: user.id, username: user.username, isAdmin: user.isAdmin });
+            } else {
+                cb(null, null);
+            }
         })
         .catch(err => {
             cb(err, null);
