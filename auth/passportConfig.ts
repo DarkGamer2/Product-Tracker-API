@@ -12,14 +12,14 @@ passport.use(new LocalStrategy(async (username: string, password: string, done: 
         const user = await User.findOne({ username });
 
         if (!user || !user.password) { // Check if user or password is undefined
-            return done(null, false);
+            return done(null, false, { message: 'Incorrect username or password' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (isMatch) {
             return done(null, user);
         } else {
-            return done(null, false);
+            return done(null, false, { message: 'Incorrect password' });
         }
     } catch (err) {
         return done(err);
@@ -32,13 +32,13 @@ const jwtOptions = {
     secretOrKey: process.env.JWT_SECRET || "your-secret-key", // Secret for signing JWT (you should use a strong secret)
 };
 
-passport.use(new JwtStrategy(jwtOptions, async (payload: any, done: any) => {
+passport.use(new JwtStrategy(jwtOptions, async (payload: { id: string }, done: any) => {
     try {
         // Find user by ID from the decoded JWT payload
         const user = await User.findById(payload.id);
 
         if (!user) {
-            return done(null, false); // No user found
+            return done(null, false, { message: 'User not found' }); // No user found
         }
         
         // Return user object on successful authentication
@@ -50,7 +50,7 @@ passport.use(new JwtStrategy(jwtOptions, async (payload: any, done: any) => {
 
 // Serialize user to store user ID in session (for local strategy)
 passport.serializeUser((user, cb) => {
-    cb(null, (user as any).id);
+    cb(null, (user as userInterface).id);
 });
 
 // Deserialize user by ID (for local strategy)
@@ -68,3 +68,5 @@ passport.deserializeUser((id: string, cb: (err: any, user: Partial<userInterface
             cb(err, null);
         });
 });
+
+export default passport;

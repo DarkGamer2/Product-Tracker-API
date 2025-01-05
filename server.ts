@@ -8,7 +8,7 @@ import cors from "cors";
 import jwt from "jsonwebtoken"
 import expressSession from "express-session";
 import cookieParser from 'cookie-parser';
-import passport from 'passport';
+import passport from "./auth/passportConfig"
 import mongoose from 'mongoose';
 import Report from './models/Feedback';
 const app = express();
@@ -25,7 +25,6 @@ app.use(express.urlencoded({extended: true}));
 // }));
 app.use(passport.session());
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
-require("./auth/passportConfig")(passport)
 passport.initialize();
 passport.session();
 
