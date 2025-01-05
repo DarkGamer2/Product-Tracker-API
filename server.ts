@@ -23,7 +23,6 @@ app.use(express.urlencoded({extended: true}));
 // }));
 app.use(passport.session());
 require("./auth/passportConfig")(passport)
-
 app.use(cookieParser("secret_code"));
 
 interface Product {
