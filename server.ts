@@ -16,12 +16,11 @@ const port=process.env.PORT||3000;
 app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({extended: true}));
-app.use(expressSession({
-  secret: 'your_secret_key',
-  resave: false,
-  saveUninitialized: true
-}));
-app.use(passport.initialize());
+// app.use(expressSession({
+//   secret: 'your_secret_key',
+//   resave: false,
+//   saveUninitialized: true
+// }));
 app.use(passport.session());
 require("./auth/passportConfig")(passport)
 
@@ -150,7 +149,8 @@ app.get('/api/customers', async (req: Request, res: Response) => {
       email: user.email ?? null,
       id: user._id.toString(), 
       mobileNumber:user.mobileNumber,
-      isAdmin:user.isAdmin// Convert _id to string
+      isAdmin:user.isAdmin,// Convert _id to string
+      created_at:user.created_at
     }));
     
     if (transformedUsers.length === 0) {
