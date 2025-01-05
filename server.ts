@@ -26,6 +26,8 @@ app.use(express.urlencoded({extended: true}));
 app.use(passport.session());
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 require("./auth/passportConfig")(passport)
+passport.initialize();
+passport.session();
 
 app.use(cookieParser("secret_code"));
 
