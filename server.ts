@@ -1,14 +1,12 @@
 import express, { NextFunction, Request, Response } from 'express';
 import Product from "./models/Product"
 import User from "./models/User"
-import Tab from "./models/Tab";
 import { productInterface, userInterface } from './interfaces/interface';
 import bcrypt from "bcryptjs";
 import cors from "cors";
 import expressSession from "express-session";
 import cookieParser from 'cookie-parser';
 import passport from 'passport';
-import path from "path";
 import mongoose from 'mongoose';
 import Report from './models/Feedback';
 const app = express();
@@ -16,11 +14,11 @@ const port=process.env.PORT||3000;
 app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({extended: true}));
-// app.use(expressSession({
-//   secret: 'your_secret_key',
-//   resave: false,
-//   saveUninitialized: true
-// }));
+app.use(expressSession({
+  secret: 'your_secret_key',
+  resave: false,
+  saveUninitialized: true
+}));
 app.use(passport.session());
 require("./auth/passportConfig")(passport)
 app.use(cookieParser("secret_code"));
