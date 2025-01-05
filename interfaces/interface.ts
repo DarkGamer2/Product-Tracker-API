@@ -4,12 +4,15 @@ export interface productInterface {
     productImage: string;
 }
 
-export interface userInterface {
-    username: string | null;
-    password: string | null;
+import { Document } from 'mongoose';
+
+export interface userInterface extends Document {
+    username: string 
+    password: string 
     email: string | null;
     id: string;
-    isAdmin?:boolean,
-    mobileNumber:string
+    isAdmin: boolean;
+    mobileNumber: string;
+    created_at:Date
 }
 

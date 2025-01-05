@@ -1,20 +1,17 @@
-import mongoose from "mongoose";
-import { Schema } from "mongoose";
-import dotenv from "dotenv";
-
-dotenv.config();
+import mongoose, { Schema, Document } from "mongoose";
+import { userInterface } from "../interfaces/interface"; // Import userInterface
 
 // Define the User schema
-const userSchema = new Schema({
-    username: { type: String, required: true }, // Add validation
+const userSchema = new Schema<userInterface>({
+    username: { type: String, required: true },
     password: { type: String, required: true },
-    email: { type: String, required: true, unique: true }, // Email should be unique
+    email: { type: String, required: true, unique: true },
     mobileNumber: { type: String, required: true },
-    created_at: { type: Date, default: Date.now }, 
-    isAdmin:{type:Boolean,default:false}// Set default to the current date
+    created_at: { type: Date, default: Date.now },
+    isAdmin: { type: Boolean, default: false }, // Default value for isAdmin
 });
 
-// Enable virtuals and transform _id to idå
+// Enable virtuals and transform _id to id
 userSchema.set('toJSON', {
     virtuals: true,
     transform: function (doc, ret) {
@@ -24,12 +21,7 @@ userSchema.set('toJSON', {
     },
 });
 
-// Connect to the database
-mongoose.connect(`${process.env.MONGO_URI}`, {
-    
-});
-
-// Create the User model
-const User = mongoose.model("User", userSchema);
+// Create the User model and apply the userInterface
+const User = mongoose.model<userInterface>("User", userSchema);
 
 export default User;
