@@ -114,7 +114,7 @@ function adminOnly(req: Request, res: Response, next: NextFunction) {
     }
 });
 
-app.post("/api/login", async (req, res) => {
+app.post("/api/login", async (req:Request, res:Response) => {
   const { username, password } = req.body;
 
   const user = await User.findOne({ username });
