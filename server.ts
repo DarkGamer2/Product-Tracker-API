@@ -5,10 +5,10 @@ import Tab from "./models/Tab";
 import { productInterface, userInterface } from './interfaces/interface';
 import bcrypt from "bcryptjs";
 import cors from "cors";
-import jwt from "jsonwebtoken"
 import expressSession from "express-session";
 import cookieParser from 'cookie-parser';
-import passport from "./auth/passportConfig"
+import passport from 'passport';
+import path from "path";
 import mongoose from 'mongoose';
 import Report from './models/Feedback';
 const app = express();
@@ -16,17 +16,14 @@ const port=process.env.PORT||3000;
 app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({extended: true}));
-
-
-// app.use(expressSession({
-//   secret: 'your_secret_key',
-//   resave: false,
-//   saveUninitialized: true
-// }));
+app.use(expressSession({
+  secret: 'your_secret_key',
+  resave: false,
+  saveUninitialized: true
+}));
+app.use(passport.initialize());
 app.use(passport.session());
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
-passport.initialize();
-passport.session();
+require("./auth/passportConfig")(passport)
 
 app.use(cookieParser("secret_code"));
 
@@ -59,12 +56,12 @@ interface Product {
 
 ensureTestAdmin().catch(console.error);
 
-function adminOnly(req: Request, res: Response, next: NextFunction) {
+function adminOnly(req:Request, res:Response, next:NextFunction) {
   const user=new User();
   if (req.isAuthenticated() && user.isAdmin===true) {
-    return next();
+      return next();
   } else {
-    return res.status(403).json({ error: "Access denied. Admins only." });
+      return res.status(403).json({ error: "Access denied. Admins only." });
   }
 }
 
@@ -114,62 +111,54 @@ function adminOnly(req: Request, res: Response, next: NextFunction) {
     }
 });
 
-app.post("/api/login", async (req:Request, res:Response) => {
-  const { username, password } = req.body;
-
-  const user = await User.findOne({ username });
-  if (!user) {
-    return res.status(400).json({ error: "User not found" });
-  }
-
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
-    return res.status(400).json({ error: "Invalid credentials" });
-  }
-
-  const payload = { id: user._id };
-  const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "1h" });
-
-  // Set token in HTTP-only cookie
-  res.cookie("token", token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
-
-  res.json({ message: "Login successful" });
+app.post('/api/login', (req: Request, res: Response, next: NextFunction) => {
+    passport.authenticate("local", (err: Error, user: userInterface, info: any,message:string) => {
+        if (err) {
+            return next(err);
+        }
+        if (!user) {
+            return res.status(401).json({ err: "No user exists!" }); // Send JSON response
+        }
+        req.logIn(user, (err) => {
+            if (err) {
+                return next(err);
+            }
+            return res.status(200).json({ message: "User logged in successfully!" }); // Send JSON response
+        });
+    })(req, res, next);
 });
 
-
-app.post('/api/logout', (req: Request, res: Response) => {
-  req.logOut((err: Error) => {
-    if (err) {
-      return res.status(500).send("Internal Server Error");
-    }
-    res.status(200).json({ message: "User logged out successfully" }); // Only one response is needed
-  });
+app.post('/api/logout',(req:Request, res:Response) => {
+    req.logOut((err:Error)=>{
+        if(err){
+            return res.status(500).send("Internal Server Error");
+        }
+        return res.status(200).send("User logged out successfully");
+    });
+    res.status(200).json({ message: "User logged out successfully!" }); // Send JSON response
 });
 
 app.get('/api/customers', async (req: Request, res: Response) => {
   try {
-    // Fetch all users with .lean() to return plain JavaScript objects
+    // Fetch all users
     const users = await User.find().lean().exec();
-
+    
     // Transform documents to match userInterface
-    const transformedUsers: any= users.map(user => ({
+    const transformedUsers: userInterface[] = users.map(user => ({
       username: user.username ?? null,
       password: user.password ?? null,
       email: user.email ?? null,
-      id: user._id.toString(), // Convert _id to string
-      mobileNumber: user.mobileNumber,
-      isAdmin: user.isAdmin,
-      created_at: user.created_at // Reference created_at from the user object
+      id: user._id.toString(), 
+      mobileNumber:user.mobileNumber,
+      isAdmin:user.isAdmin// Convert _id to string
     }));
-
-    // Check if no users were found
+    
     if (transformedUsers.length === 0) {
       return res.status(404).send('No users found.');
     }
-
-    // Send the transformed data as a response
+    
+    // Send the array of users
     res.json(transformedUsers);
-
   } catch (err) {
     // Handle errors
     console.error(err);
@@ -208,9 +197,10 @@ app.post('/api/customers', async (req: Request, res: Response) => {
 });
 
 app.post('/api/products/addProduct', adminOnly, async (req: Request, res: Response) => {
-  const product = new Product(req.body);
-  await product.save();
-  res.status(200).json({ message: 'Product added successfully', product });
+ const product=new Product(req.body);
+ await product.save();
+ res.json({ message: 'Product added successfully', product });
+ console.log(product);
 });
 app.get('/api/products', async (req: Request, res: Response) => {
   try {
@@ -222,8 +212,25 @@ app.get('/api/products', async (req: Request, res: Response) => {
 });
 
 app.get('/api/users/:id', async (req: Request, res: Response) => {
-  const userId = req.params.id;
+  try {
+    const user = await User.findById(req.params.id).exec();
+    if (!user) {
+      return res.status(404).send('User not found');
+    }
+    res.json(user);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
 
+app.get('/api/users/:id', async (req: Request, res: Response) => {
+  const userId = req.query.id as string; // Assuming user ID is passed as a query parameter
+
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required' });
+  }
+
+  // Validate ObjectId
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     return res.status(400).json({ error: 'Invalid User ID' });
   }
@@ -274,11 +281,11 @@ app.post('/api/products/:barcode', async (req: Request, res: Response) => {
   }
 });
 
-app.post("/api/feedback", (req: Request, res: Response) => {
-  const report = new Report(req.body);
+app.post("/api/feedback",(req:Request,res:Response)=>{
+  const report=new Report(req.body);
   report.save();
-  res.status(200).json({ message: 'Feedback saved successfully' });
-});
+  res.send(200)
+})
 app.listen(port, () => {
     console.log('Server is running on port 4040');
 });
