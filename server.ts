@@ -7,6 +7,7 @@ import cors from "cors";
 import expressSession from "express-session";
 import cookieParser from 'cookie-parser';
 import passport from 'passport';
+import path from "path";
 import mongoose from 'mongoose';
 import Report from './models/Feedback';
 const app = express();
@@ -19,6 +20,7 @@ app.use(expressSession({
   resave: false,
   saveUninitialized: true
 }));
+app.use(passport.initialize());
 app.use(passport.session());
 require("./auth/passportConfig")(passport)
 app.use(cookieParser("secret_code"));
@@ -146,8 +148,7 @@ app.get('/api/customers', async (req: Request, res: Response) => {
       email: user.email ?? null,
       id: user._id.toString(), 
       mobileNumber:user.mobileNumber,
-      isAdmin:user.isAdmin,// Convert _id to string
-      created_at:user.created_at
+      isAdmin:user.isAdmin// Convert _id to string
     }));
     
     if (transformedUsers.length === 0) {
