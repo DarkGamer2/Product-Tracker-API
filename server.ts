@@ -279,9 +279,9 @@ app.post('/api/products/:barcode', async (req: Request, res: Response) => {
   }
 });
 
-app.post("/api/feedback",(req:Request,res:Response)=>{
+app.post("/api/feedback",async (req:Request,res:Response)=>{
   const report=new Report(req.body);
-  report.save();
+  await report.save();
   res.send(200)
 })
 app.listen(port, () => {
