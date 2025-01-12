@@ -312,6 +312,34 @@ app.put("/api/users/adminAccess", async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
+app.post("/api/users/adminAccess", async (req: Request, res: Response) => {
+  try {
+    const { username } = req.body;
+
+    // Validate input
+    if (!username) {
+      return res.status(400).json({ error: "Username is required" });
+    }
+
+    // Check if the user exists
+    const user = await User.findOne({ username });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Check if the user has admin access
+    if (user.isAdmin) {
+      return res.status(200).json({ isAdmin: true, message: "User has admin access" });
+    } else {
+      return res.status(200).json({ isAdmin: false, message: "User does not have admin access" });
+    }
+  } catch (error) {
+    console.error("Error checking admin status:", error);
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+});
 app.listen(port, () => {
     console.log('Server is running on port 4040');
 });
