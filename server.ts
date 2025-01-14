@@ -1,7 +1,6 @@
 import express, { NextFunction, Request, Response } from 'express';
 import Product from "./models/Product"
 import User from "./models/User"
-import Tab from "./models/Tab";
 import { productInterface, userInterface } from './interfaces/interface';
 import bcrypt from "bcryptjs";
 import cors from "cors";
@@ -24,7 +23,6 @@ app.use(expressSession({
 app.use(passport.initialize());
 app.use(passport.session());
 require("./auth/passportConfig")(passport)
-
 app.use(cookieParser("secret_code"));
 
 interface Product {
@@ -56,9 +54,9 @@ interface Product {
 
 ensureTestAdmin().catch(console.error);
 
-function adminOnly(req:Request, res:Response, next:NextFunction) {
+function adminOnly(req:any, res:Response, next:NextFunction) {
   const user=new User();
-  if (req.isAuthenticated() && user.isAdmin===true) {
+  if (req.isAuthenticated() && req.user?.isAdmin===true) {
       return next();
   } else {
       return res.status(403).json({ error: "Access denied. Admins only." });
@@ -223,29 +221,29 @@ app.get('/api/users/:id', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/users/:id', async (req: Request, res: Response) => {
-  const userId = req.query.id as string; // Assuming user ID is passed as a query parameter
+// app.get('/api/users/:id', async (req: Request, res: Response) => {
+//   const userId = req.query.id as string; // Assuming user ID is passed as a query parameter
 
-  if (!userId) {
-    return res.status(400).json({ error: 'User ID is required' });
-  }
+//   if (!userId) {
+//     return res.status(400).json({ error: 'User ID is required' });
+//   }
 
-  // Validate ObjectId
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return res.status(400).json({ error: 'Invalid User ID' });
-  }
+//   // Validate ObjectId
+//   if (!mongoose.Types.ObjectId.isValid(userId)) {
+//     return res.status(400).json({ error: 'Invalid User ID' });
+//   }
 
-  try {
-    const user = await User.findById(userId).exec();
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    res.json(user);
-  } catch (error) {
-    console.error('Error querying the database:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+//   try {
+//     const user = await User.findById(userId).exec();
+//     if (!user) {
+//       return res.status(404).json({ error: 'User not found' });
+//     }
+//     res.json(user);
+//   } catch (error) {
+//     console.error('Error querying the database:', error);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// });
 
 app.get('/api/products/:barcode', async (req: Request, res: Response) => {
   const barcode = req.params.barcode;
@@ -281,11 +279,100 @@ app.post('/api/products/:barcode', async (req: Request, res: Response) => {
   }
 });
 
-app.post("/api/feedback",(req:Request,res:Response)=>{
-  const report=new Report(req.body);
-  report.save();
-  res.send(200)
-})
+app.post("/api/feedback", async (req: Request, res: Response) => {
+  try {
+    const report = new Report(req.body);
+    await report.save();
+    res.sendStatus(200); // Use sendStatus to send a proper HTTP status code
+  } catch (error) { // Correctly place the catch block
+    console.error("Error saving feedback:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.put("/api/users/adminAccess", async (req: Request, res: Response) => {
+  try {
+    const { username } = req.body;
+
+    if (!username) {
+      return res.status(400).json({ error: "Username is required" });
+    }
+
+    const user = await User.findOne({ username });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (user.isAdmin) {
+      return res.status(400).json({ error: "User already has admin access" });
+    }
+
+    user.isAdmin = true;
+    await user.save();
+
+    return res.status(200).json({ message: "User granted admin access", user });
+  } catch (error) {
+    console.error("Error updating admin access:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/users/adminAccess", async (req: Request, res: Response) => {
+  try {
+    const { username } = req.body;
+
+    // Validate input
+    if (!username) {
+      return res.status(400).json({ error: "Username is required" });
+    }
+
+    // Check if the user exists
+    const user = await User.findOne({ username });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Check if the user has admin access
+    if (user.isAdmin) {
+      return res.status(200).json({ isAdmin: true, message: "User has admin access" });
+    } else {
+      return res.status(200).json({ isAdmin: false, message: "User does not have admin access" });
+    }
+  } catch (error) {
+    console.error("Error checking admin status:", error);
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+});
+app.put("/api/users/resetPassword", async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate the input
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required." });
+    }
+
+    // Find the user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update the user's password
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.status(200).json({ message: "Password has been reset successfully." });
+  } catch (err) {
+    console.error("Error during password reset request:", err);
+    return res.status(500).json({ message: "Error on the server." });
+  }
+});
 app.listen(port, () => {
     console.log('Server is running on port 4040');
 });
