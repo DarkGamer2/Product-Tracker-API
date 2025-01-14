@@ -279,11 +279,16 @@ app.post('/api/products/:barcode', async (req: Request, res: Response) => {
   }
 });
 
-app.post("/api/feedback",async (req:Request,res:Response)=>{
-  const report=new Report(req.body);
-  await report.save();
-  res.send(200)
-})
+app.post("/api/feedback", async (req: Request, res: Response) => {
+  try {
+    const report = new Report(req.body);
+    await report.save();
+    res.sendStatus(200); // Use sendStatus to send a proper HTTP status code
+  } catch (error) { // Correctly place the catch block
+    console.error("Error saving feedback:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 app.put("/api/users/adminAccess", async (req: Request, res: Response) => {
   try {
