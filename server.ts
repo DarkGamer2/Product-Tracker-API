@@ -340,6 +340,34 @@ app.post("/api/users/adminAccess", async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Something went wrong" });
   }
 });
+app.put("/api/users/resetPassword", async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate the input
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required." });
+    }
+
+    // Find the user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update the user's password
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.status(200).json({ message: "Password has been reset successfully." });
+  } catch (err) {
+    console.error("Error during password reset request:", err);
+    return res.status(500).json({ message: "Error on the server." });
+  }
+});
 app.listen(port, () => {
     console.log('Server is running on port 4040');
 });
