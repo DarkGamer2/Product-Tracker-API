@@ -84,29 +84,34 @@ function adminOnly(req:any, res:Response, next:NextFunction) {
 
 
 
-  app.post("/api/register", async (req: Request, res: Response) => {
-    try {
-        const user = await User.findOne({ username: req.body.username });
-        if (user) {
-            console.log("User with that username already exists");
-            res.status(400).json({ error: "User with that username already exists" });
-        }
+app.post("/api/register", async (req: Request, res: Response) => {
+  const { username, password, email, mobileNumber } = req.body;
 
-        const hashedPassword = await bcrypt.hash(req.body.password, 10);
-        const newUser = new User({
-            username: req.body.username,
-            password: hashedPassword,
-            email: req.body.email,
-            mobileNumber: req.body.mobileNumber
-        });
+  // Check for missing fields
+  if (!username || !password || !email || !mobileNumber) {
+      return res.status(400).json({ error: "All fields are required: username, password, email, mobileNumber" });
+  }
 
-        await newUser.save();
-        console.log("User registered successfully");
-        res.status(200).json({ message: "User registered successfully" });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Internal Server Error" });
-    }
+  try {
+      const existingUser = await User.findOne({ username });
+      if (existingUser) {
+          return res.status(400).json({ error: "User with that username already exists" });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser = new User({
+          username,
+          password: hashedPassword,
+          email,
+          mobileNumber
+      });
+
+      await newUser.save();
+      res.status(200).json({ message: "User registered successfully" });
+  } catch (error) {
+      console.error("Registration Error:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+  }
 });
 
 app.post('/api/login', (req: Request, res: Response, next: NextFunction) => {
