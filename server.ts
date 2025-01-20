@@ -10,6 +10,7 @@ import passport from 'passport';
 import path from "path";
 import mongoose from 'mongoose';
 import Report from './models/Feedback';
+import Tab from './models/Tab';
 const app = express();
 const port=process.env.PORT||3000;
 app.use(cors());
@@ -249,6 +250,12 @@ app.get('/api/users/:id', async (req: Request, res: Response) => {
 //     res.status(500).json({ error: 'Internal server error' });
 //   }
 // });
+
+app.post("/api/tabs/:id",async (req:Request,res:Response)=>{
+  const id = req.params.id;
+    const tab = new Tab({...req.body, productId: id });
+    await tab.save();
+  })
 
 app.get('/api/products/:barcode', async (req: Request, res: Response) => {
   const barcode = req.params.barcode;
