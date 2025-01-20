@@ -15,7 +15,7 @@ const productSchema = new Schema({
     customer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
     customer_name: { type: String, required: true },
     created_at: { type: Date, default: Date.now },
-    products: [productSchema],
+    tabItems: [productSchema],
     status: { type: String, enum: ['pending', 'closed'], default: 'pending' },
     updated_at: { type: Date, default: Date.now },
   });

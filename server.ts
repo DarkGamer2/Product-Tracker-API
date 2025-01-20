@@ -253,7 +253,11 @@ app.get('/api/users/:id', async (req: Request, res: Response) => {
 
 app.post("/api/tabs/:id",async (req:Request,res:Response)=>{
   const id = req.params.id;
-    const tab = new Tab({...req.body, productId: id });
+  const tab = new Tab({
+    customer_id: id,  // Make sure `id` is a valid ObjectId
+    customer_name: req.body.customer_name,  // Assuming this comes from the body
+    products: req.body.tabItems,
+  });
     await tab.save();
   })
 
