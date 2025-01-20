@@ -218,11 +218,11 @@ app.get('/api/users/:id', async (req: Request, res: Response) => {
   try {
     const user = await User.findById(req.params.id).exec();
     if (!user) {
-      return res.status(404).send('User not found');
+      return res.json({ status: 404, message:"User not found"})
     }
     res.json(user);
-  } catch (err) {
-    res.status(500).send(err);
+  } catch (err:any) {
+    res.json({ status: 404, message: `${err.message}`})
   }
 });
 
