@@ -256,27 +256,31 @@ app.post("/api/tabs/:id", async (req: Request, res: Response) => {
 
   // Validate customer_id if it's an ObjectId
   if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: "Invalid customer ID" });
+    return res.status(400).json({ error: "Invalid customer ID" });
   }
 
   // Validate request body
-  if (!req.body || !req.body.products || !req.body.customer_name) {
-      return res.status(400).json({ error: "Missing products or customer_name in request body" });
+  if (!req.body || !req.body.tabItems || !req.body.customer_name) {
+    return res
+      .status(400)
+      .json({ error: "Missing tabItems or customer_name in request body" });
   }
 
   try {
-      const tab = new Tab({
-          customer_id: id,
-          products: req.body.products,
-          customer_name: req.body.customer_name, // Use customer_name from request
-      });
+    const tab = new Tab({
+      customer_id: id,
+      tabItems: req.body.tabItems, // Use tabItems from request
+      customer_name: req.body.customer_name,
+    });
 
-      await tab.save();
+    await tab.save();
 
-      res.status(201).json({ message: "Tab saved successfully" });
+    res.status(201).json({ message: "Tab saved successfully" });
   } catch (error: any) {
-      console.error("Error saving tab:", error);
-      res.status(500).json({ error: "Failed to save tab", details: error.message });
+    console.error("Error saving tab:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to save tab", details: error.message });
   }
 });
 app.get('/api/products/:barcode', async (req: Request, res: Response) => {
