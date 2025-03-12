@@ -251,16 +251,33 @@ app.get('/api/users/:id', async (req: Request, res: Response) => {
 //   }
 // });
 
-app.post("/api/tabs/:id",async (req:Request,res:Response)=>{
+app.post("/api/tabs/:id", async (req: Request, res: Response) => {
   const id = req.params.id;
-  const tab = new Tab({
-    customer_id: id,  // Make sure `id` is a valid ObjectId
-    customer_name: req.body.customer_name,  // Assuming this comes from the body
-    products: req.body.tabItems,
-  });
-    await tab.save();
-  })
 
+  // Validate customer_id if it's an ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid customer ID" });
+  }
+
+  // Validate request body
+  if (!req.body || !req.body.products) {
+      return res.status(400).json({ error: "Missing products in request body" });
+  }
+
+  try {
+      const tab = new Tab({
+          customer_id: id,
+          products: req.body.products,
+      });
+
+      await tab.save();
+
+      res.status(201).json({ message: "Tab saved successfully" });
+  } catch (error: any) {
+      console.error("Error saving tab:", error);
+      res.status(500).json({ error: "Failed to save tab", details: error.message });
+  }
+});
 app.get('/api/products/:barcode', async (req: Request, res: Response) => {
   const barcode = req.params.barcode;
 
