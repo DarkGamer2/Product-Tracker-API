@@ -260,14 +260,15 @@ app.post("/api/tabs/:id", async (req: Request, res: Response) => {
   }
 
   // Validate request body
-  if (!req.body || !req.body.products) {
-      return res.status(400).json({ error: "Missing products in request body" });
+  if (!req.body || !req.body.products || !req.body.customer_name) {
+      return res.status(400).json({ error: "Missing products or customer_name in request body" });
   }
 
   try {
       const tab = new Tab({
           customer_id: id,
           products: req.body.products,
+          customer_name: req.body.customer_name, // Use customer_name from request
       });
 
       await tab.save();
