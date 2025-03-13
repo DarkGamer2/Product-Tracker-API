@@ -317,6 +317,19 @@ app.post('/api/products/:barcode', async (req: Request, res: Response) => {
   }
 });
 
+app.get('/api/products/:id',async (req:Request, res:Response) => {
+  const id = req.params.id;
+  try{
+    const product = await Product.findById(id);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    res.json(product);
+  }catch (err) {
+    console.error('Error fetching product:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+})
 app.post("/api/feedback", async (req: Request, res: Response) => {
   try {
     const report = new Report(req.body);
