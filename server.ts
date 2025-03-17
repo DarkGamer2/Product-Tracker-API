@@ -10,11 +10,14 @@ import passport from 'passport';
 import path from "path";
 import mongoose from 'mongoose';
 import Report from './models/Feedback';
+import Company from './models/Company';
+
 const app = express();
-const port=process.env.PORT||3000;
+const port = process.env.PORT || 3000;
+
 app.use(cors());
-app.use(express.json()); 
-app.use(express.urlencoded({extended: true}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(expressSession({
   secret: 'your_secret_key',
   resave: false,
@@ -26,135 +29,150 @@ require("./auth/passportConfig")(passport)
 app.use(cookieParser("secret_code"));
 
 interface Product {
-    barcode: string;
-    name: string;
-    price: number;
-  }
-  
-  const products: { [key: string]: Product } = {
-    '123456789012': { barcode: '123456789012', name: 'Product 1', price: 10 },
-    '123456789013': { barcode: '123456789013', name: 'Product 2', price: 15 },
-    '123456789014': { barcode: '123456789014', name: 'Product 3', price: 20 },
-    '123456789015': { barcode: '123456789015', name: 'Product 4', price: 25 }
-  };
-  
-  //admin initlization
-  async function ensureTestAdmin() {
-    const testUsername = "Tester"; // Replace with your test account username
-    const testUser = await User.findOne({ username: testUsername });
+  barcode: string;
+  name: string;
+  price: number;
+}
 
-    if (testUser && !testUser.isAdmin) {
-        testUser.isAdmin = true;
-        await testUser.save();
-        console.log("Test user is now an admin.");
-    } else if (!testUser) {
-        console.log("Test user not found.");
-    }
+const products: { [key: string]: Product } = {
+  '123456789012': { barcode: '123456789012', name: 'Product 1', price: 10 },
+  '123456789013': { barcode: '123456789013', name: 'Product 2', price: 15 },
+  '123456789014': { barcode: '123456789014', name: 'Product 3', price: 20 },
+  '123456789015': { barcode: '123456789015', name: 'Product 4', price: 25 }
+};
+
+//admin initlization
+async function ensureTestAdmin() {
+  const testUsername = "Tester"; // Replace with your test account username
+  const testUser = await User.findOne({ username: testUsername });
+
+  if (testUser && !testUser.isAdmin) {
+    testUser.isAdmin = true;
+    await testUser.save();
+    console.log("Test user is now an admin.");
+  } else if (!testUser) {
+    console.log("Test user not found.");
+  }
 }
 
 ensureTestAdmin().catch(console.error);
 
-function adminOnly(req:any, res:Response, next:NextFunction) {
-  const user=new User();
-  if (req.isAuthenticated() && req.user?.isAdmin===true) {
-      return next();
+function adminOnly(req: any, res: Response, next: NextFunction) {
+  if (req.isAuthenticated() && req.user?.isAdmin === true) {
+    return next();
   } else {
-      return res.status(403).json({ error: "Access denied. Admins only." });
+    return res.status(403).json({ error: "Access denied. Admins only." });
   }
 }
 
-  app.get('/products/:barcode', (req, res) => {
-    const { barcode } = req.params;
-    const product = products[barcode];
-    if (product) {
-      res.json(product);
+const tenantMiddleware = (req: Request & { user?: any, tenant_id?: string }, res: Response, next: NextFunction) => {
+  if (!req.user || !req.user.tenant_id) {
+    return res.status(403).json({ error: "Unauthorized access" });
+  }
+  req.tenant_id = req.user.tenant_id; // Attach tenant ID to request
+  next();
+};
+
+const roleMiddleware = (roles: string[]) => {
+  return (req: Request & { user?: any }, res: Response, next: NextFunction) => {
+    if (!roles.includes(req.user?.role)) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+    next();
+  };
+};
+
+app.get('/products/:barcode', (req, res) => {
+  const { barcode } = req.params;
+  const product = products[barcode];
+  if (product) {
+    res.json(product);
+  } else {
+    res.status(404).json({ error: 'Product not found' });
+  }
+});
+
+app.get("/", (req: Request, res: Response) => {
+  res.send("API is working as expected");
+});
+
+app.post("/api/register", async (req, res) => {
+  try {
+    const { name, email, password, companyName } = req.body;
+
+    // Check if company exists
+    let company = await Company.findOne({ name: companyName });
+    let tenant_id;
+
+    if (!company) {
+      // Create new company
+      tenant_id = new mongoose.Types.ObjectId().toString();
+      company = new Company({ name: companyName, tenant_id });
+      await company.save();
     } else {
-      res.status(404).json({ error: 'Product not found' });
+      tenant_id = company.tenant_id;
     }
-  });
 
-  app.get("/",(req:Request,res:Response)=>{
-    res.send("API is working as expected");
-  })
-// app.post('/api/products', (req: Request, res: Response) => {
-//     const product = new Product(req.body);
-//     product.save();
-//     res.send(200);
-// });
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Create user
+    const newUser = new User({ name, email, password: hashedPassword, tenant_id, role: "admin" });
+    await newUser.save();
 
-
-  app.post("/api/register", async (req: Request, res: Response) => {
-    try {
-        const user = await User.findOne({ username: req.body.username });
-        if (user) {
-            console.log("User with that username already exists");
-            res.status(400).json({ error: "User with that username already exists" });
-        }
-
-        const hashedPassword = await bcrypt.hash(req.body.password, 10);
-        const newUser = new User({
-            username: req.body.username,
-            password: hashedPassword,
-            email: req.body.email,
-            mobileNumber: req.body.mobileNumber
-        });
-
-        await newUser.save();
-        console.log("User registered successfully");
-        res.status(200).json({ message: "User registered successfully" });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Internal Server Error" });
-    }
+    res.json({ message: "User registered successfully", user: newUser, company });
+  } catch (error) {
+    res.status(500).json({ error: "Registration failed" });
+  }
 });
 
 app.post('/api/login', (req: Request, res: Response, next: NextFunction) => {
-    passport.authenticate("local", (err: Error, user: userInterface, info: any,message:string) => {
-        if (err) {
-            return next(err);
-        }
-        if (!user) {
-            return res.status(401).json({ err: "No user exists!" }); // Send JSON response
-        }
-        req.logIn(user, (err) => {
-            if (err) {
-                return next(err);
-            }
-            return res.status(200).json({ message: "User logged in successfully!" }); // Send JSON response
-        });
-    })(req, res, next);
+  passport.authenticate("local", (err: Error, user: userInterface, info: any, message: string) => {
+    if (err) {
+      return next(err);
+    }
+    if (!user) {
+      return res.status(401).json({ err: "No user exists!" }); // Send JSON response
+    }
+    req.logIn(user, (err) => {
+      if (err) {
+        return next(err);
+      }
+      return res.status(200).json({ message: "User logged in successfully!" }); // Send JSON response
+    });
+  })(req, res, next);
 });
 
-app.post('/api/logout',(req:Request, res:Response) => {
-    req.logOut((err:Error)=>{
-        if(err){
-            return res.status(500).send("Internal Server Error");
-        }
-        return res.status(200).send("User logged out successfully");
-    });
-    res.status(200).json({ message: "User logged out successfully!" }); // Send JSON response
+app.post('/api/logout', (req: Request, res: Response) => {
+  req.logOut((err: Error) => {
+    if (err) {
+      return res.status(500).send("Internal Server Error");
+    }
+    return res.status(200).send("User logged out successfully");
+  });
+  res.status(200).json({ message: "User logged out successfully!" }); // Send JSON response
 });
 
 app.get('/api/customers', async (req: Request, res: Response) => {
   try {
     // Fetch all users
     const users = await User.find().lean().exec();
-    
+
     // Transform documents to match userInterface
     const transformedUsers: userInterface[] = users.map(user => ({
       username: user.username ?? null,
       password: user.password ?? null,
       email: user.email ?? null,
-      id: user._id.toString(), 
-      mobileNumber:user.mobileNumber,
-      isAdmin:user.isAdmin// Convert _id to string
+      id: user._id.toString(),
+      mobileNumber: user.mobileNumber,
+      isAdmin: user.isAdmin,
+      tenant_id: user.tenant_id // Add tenant_id here
     }));
-    
+
     if (transformedUsers.length === 0) {
       return res.status(404).send('No users found.');
     }
-    
+
     // Send the array of users
     res.json(transformedUsers);
   } catch (err) {
@@ -168,14 +186,14 @@ app.post('/api/customers', async (req: Request, res: Response) => {
   try {
     // Check if user already exists
     const existingUser = await User.findOne({ email: req.body.email }).exec();
-    
+
     if (existingUser) {
       return res.status(400).send('User already exists.');
     }
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(req.body.password, 10);
-    
+
     // Create a new user
     const newUser = new User({
       username: req.body.username,
@@ -194,56 +212,28 @@ app.post('/api/customers', async (req: Request, res: Response) => {
   }
 });
 
-app.post('/api/products/addProduct', adminOnly, async (req: Request, res: Response) => {
- const product=new Product(req.body);
- await product.save();
- res.json({ message: 'Product added successfully', product });
- console.log(product);
+app.post("/api/products/addProduct", tenantMiddleware, roleMiddleware(["admin", "manager"]), async (req, res) => {
+  const newProduct = new Product({ ...req.body, tenant_id: req.tenant_id });
+  await newProduct.save();
+  res.json(newProduct);
 });
-app.get('/api/products', async (req: Request, res: Response) => {
-  try {
-    const products = await Product.find({}).exec();
-    res.json(products);
-  } catch (err) {
-    res.status(500).send(err);
-  }
+
+app.get("/api/products", tenantMiddleware, async (req, res) => {
+  const products = await Product.find({ tenant_id: req.tenant_id });
+  res.json(products);
 });
 
 app.get('/api/users/:id', async (req: Request, res: Response) => {
   try {
     const user = await User.findById(req.params.id).exec();
     if (!user) {
-      return res.json({ status: 404, message:"User not found"})
+      return res.json({ status: 404, message: "User not found" })
     }
     res.json(user);
-  } catch (err:any) {
-    res.json({ status: 404, message: `${err.message}`})
+  } catch (err: any) {
+    res.json({ status: 404, message: `${err.message}` })
   }
 });
-
-// app.get('/api/users/:id', async (req: Request, res: Response) => {
-//   const userId = req.query.id as string; // Assuming user ID is passed as a query parameter
-
-//   if (!userId) {
-//     return res.status(400).json({ error: 'User ID is required' });
-//   }
-
-//   // Validate ObjectId
-//   if (!mongoose.Types.ObjectId.isValid(userId)) {
-//     return res.status(400).json({ error: 'Invalid User ID' });
-//   }
-
-//   try {
-//     const user = await User.findById(userId).exec();
-//     if (!user) {
-//       return res.status(404).json({ error: 'User not found' });
-//     }
-//     res.json(user);
-//   } catch (error) {
-//     console.error('Error querying the database:', error);
-//     res.status(500).json({ error: 'Internal server error' });
-//   }
-// });
 
 app.get('/api/products/:barcode', async (req: Request, res: Response) => {
   const barcode = req.params.barcode;
@@ -261,6 +251,7 @@ app.get('/api/products/:barcode', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 app.post('/api/products/:barcode', async (req: Request, res: Response) => {
   const barcode = req.params.barcode;
   const productData = req.body;
@@ -345,6 +336,7 @@ app.post("/api/users/adminAccess", async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Something went wrong" });
   }
 });
+
 app.put("/api/users/resetPassword", async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
@@ -373,7 +365,9 @@ app.put("/api/users/resetPassword", async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Error on the server." });
   }
 });
-app.listen(port, () => {
-    console.log('Server is running on port 4040');
-});
 
+//experimental changes
+
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});

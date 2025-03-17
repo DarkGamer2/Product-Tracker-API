@@ -11,6 +11,8 @@ const userSchema = new Schema({
     email: { type: String, required: true, unique: true }, // Email should be unique
     mobileNumber: { type: String, required: true },
     created_at: { type: Date, default: Date.now }, 
+    tenant_id: { type: String, required: true},
+    role: { type: String, enum: ["admin", "manager", "user"], default: "user" },
     isAdmin:{type:Boolean,default:false}// Set default to the current date
 });
 

@@ -2,6 +2,7 @@ export interface productInterface {
     productName: string;
     productPrice: number;
     productImage: string;
+    tenant_id: string;
 }
 
 export interface userInterface {
@@ -11,5 +12,6 @@ export interface userInterface {
     id: string;
     isAdmin?:boolean,
     mobileNumber:string
+    tenant_id:string
 }
 
