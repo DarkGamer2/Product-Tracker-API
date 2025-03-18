@@ -321,45 +321,45 @@ app.put("/api/tabs/:tabId", async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/products/:barcode', async (req: Request, res: Response) => {
+app.get('/api/products/scan/:barcode', async (req: Request, res: Response) => {
   const barcode = req.params.barcode;
 
   try {
-    const product = await Product.findOne({ barcode: barcode });
+    const product = await Product.findOne({ barcode: barcode }).exec();
 
     if (product) {
-      res.json({ message: 'Product found', product });
+      res.json({ product });
     } else {
       res.status(404).json({ message: 'Product not found' });
     }
   } catch (error) {
-    console.error('Error fetching product:', error);
+    console.error('Error fetching product by barcode:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-app.post('/api/products/:barcode', adminOnly, async (req: Request, res: Response) => {
+app.post('/api/products/scan/:barcode', async (req: Request, res: Response) => {
   const barcode = req.params.barcode;
-  const { productName, productPrice, productImage } = req.body;
 
-  if (!productName || typeof productPrice !== 'number' || !productImage) {
-    return res.status(400).json({ error: 'Product name, price, and image are required.' });
+  // Check if the user is authenticated
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: 'Unauthorized: Please log in to add items to your tab.' });
+  }
+
+  // Get the current user's ID
+  const userId = (req.user as userInterface)?.id || null;
+
+  if (!userId) {
+    return res.status(500).json({ message: 'Could not retrieve user ID.' });
   }
 
   try {
-    const updatedProduct = await Product.findOneAndUpdate(
-      { barcode: barcode }, // Find product by barcode
-      { productName, productPrice, productImage },
-      { new: true, upsert: true } // Create a new document if no match is found
-    );
-
-    res.json({ message: 'Product added/updated successfully', product: updatedProduct });
+    // ... rest of the function implementation ...
   } catch (error) {
-    console.error('Error updating product:', error);
+    console.error('Error adding product to tab:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 app.get('/api/products/:id', async (req: Request, res: Response) => {
   const id = req.params.id;
   try {
