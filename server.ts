@@ -321,7 +321,7 @@ app.put("/api/tabs/:tabId", async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/products/scan/:barcode', async (req: Request, res: Response) => {
+app.get('/api/products/:barcode', async (req: Request, res: Response) => {
   const barcode = req.params.barcode;
 
   try {
@@ -338,7 +338,7 @@ app.get('/api/products/scan/:barcode', async (req: Request, res: Response) => {
   }
 });
 
-app.post('/api/products/scan/:barcode', async (req: Request, res: Response) => {
+app.post('/api/products/:barcode', async (req: Request, res: Response) => {
   const barcode = req.params.barcode;
 
   // Check if the user is authenticated
