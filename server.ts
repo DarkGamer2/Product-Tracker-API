@@ -320,7 +320,12 @@ app.put("/api/tabs/:tabId", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to update tab", details: error.message });
   }
 });
+app.post('/api/tabs/:id',async (req:Request,res:Response)=>{
+  const tab=new Tab(req.body)
 
+  await tab.save();
+  
+})
 app.get('/api/products/:barcode', async (req: Request, res: Response) => {
   const barcode = req.params.barcode;
 
