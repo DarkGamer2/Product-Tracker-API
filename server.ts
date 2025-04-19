@@ -320,12 +320,17 @@ app.put("/api/tabs/:tabId", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to update tab", details: error.message });
   }
 });
-app.post('/api/tabs/:tabId',async (req:Request,res:Response)=>{
-  const tab=new Tab(req.body)
+app.post('/api/tabs/:tabId', async (req: Request, res: Response) => {
+  try {
+    const tab = new Tab(req.body);
+    await tab.save();
+    res.status(201).json(tab); // ✅ Respond to the client!
+  } catch (error) {
+    console.error('Error saving tab:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
 
-  await tab.save();
-  
-})
 
 app.get('/api/tabs/:tabId', async (req: Request, res: Response) => {
   const { tabId } = req.params;
