@@ -320,11 +320,24 @@ app.put("/api/tabs/:tabId", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to update tab", details: error.message });
   }
 });
-app.post('/api/tabs/:tabId', async (req: Request, res: Response) => {
+app.post('/api/tabs', async (req: Request, res: Response) => {
   try {
-    const tab = new Tab(req.body);
-    await tab.save();
-    res.status(201).json(tab); // ✅ Respond to the client!
+    // Expect the body to contain customer_id, customer_name, and tabItems
+    const { customer_id, customer_name, tabItems } = req.body;
+
+    if (!customer_id || !customer_name || !tabItems) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Create and save the new tab
+    const newTab = new Tab({
+      customer_id,
+      customer_name,
+      tabItems, // Assuming tabItems is an array of products
+    });
+
+    await newTab.save();
+    res.status(201).json(newTab); // Respond with the created tab
   } catch (error) {
     console.error('Error saving tab:', error);
     res.status(500).json({ message: 'Internal Server Error' });
