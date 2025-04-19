@@ -320,12 +320,30 @@ app.put("/api/tabs/:tabId", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to update tab", details: error.message });
   }
 });
-app.post('/api/tabs/:id',async (req:Request,res:Response)=>{
+app.post('/api/tabs/:tabId',async (req:Request,res:Response)=>{
   const tab=new Tab(req.body)
 
   await tab.save();
   
 })
+
+app.get('/api/tabs/:tabId', async (req: Request, res: Response) => {
+  const { tabId } = req.params;
+
+  try {
+    const tab = await Tab.findOne({ customer_id: new mongoose.Types.ObjectId(tabId) });
+
+    if (!tab) {
+      return res.status(404).json({ message: 'Tab not found' });
+    }
+
+    return res.status(200).json(tab);
+  } catch (error) {
+    console.error('Error fetching tab:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 app.get('/api/products/:barcode', async (req: Request, res: Response) => {
   const barcode = req.params.barcode;
 
