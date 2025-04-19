@@ -322,7 +322,6 @@ app.put("/api/tabs/:tabId", async (req: Request, res: Response) => {
 });
 app.post('/api/tabs', async (req: Request, res: Response) => {
   try {
-    // Expect the body to contain customer_id, customer_name, and tabItems
     const { customer_id, customer_name, tabItems } = req.body;
 
     if (!customer_id || !customer_name || !tabItems) {
@@ -333,7 +332,7 @@ app.post('/api/tabs', async (req: Request, res: Response) => {
     const newTab = new Tab({
       customer_id,
       customer_name,
-      tabItems, // Assuming tabItems is an array of products
+      tabItems,
     });
 
     await newTab.save();
