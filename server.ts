@@ -265,32 +265,32 @@ app.get('/api/tabs/customer/:customerId', async (req: Request, res: Response) =>
   }
 });
 
-app.post("/api/tabs", async (req: Request, res: Response) => {
-  const { customerId, tabItems } = req.body;
+// app.post("/api/tabs", async (req: Request, res: Response) => {
+//   const { customerId, tabItems } = req.body;
 
-  if (!customerId) {
-    return res.status(400).json({ error: "Customer ID is required" });
-  }
-  if (!mongoose.Types.ObjectId.isValid(customerId)) {
-    return res.status(400).json({ error: "Invalid customer ID" });
-  }
-  if (!tabItems || !Array.isArray(tabItems)) {
-    return res.status(400).json({ error: "tabItems must be an array" });
-  }
+//   if (!customerId) {
+//     return res.status(400).json({ error: "Customer ID is required" });
+//   }
+//   if (!mongoose.Types.ObjectId.isValid(customerId)) {
+//     return res.status(400).json({ error: "Invalid customer ID" });
+//   }
+//   if (!tabItems || !Array.isArray(tabItems)) {
+//     return res.status(400).json({ error: "tabItems must be an array" });
+//   }
 
-  try {
-    const newTab = new Tab({
-      customer_id: customerId,
-      tabItems: tabItems,
-    });
+//   try {
+//     const newTab = new Tab({
+//       customer_id: customerId,
+//       tabItems: tabItems,
+//     });
 
-    const savedTab = await newTab.save();
-    res.status(201).json({ message: "Tab created successfully", tab: savedTab });
-  } catch (error: any) {
-    console.error("Error creating tab:", error);
-    res.status(500).json({ error: "Failed to create tab", details: error.message });
-  }
-});
+//     const savedTab = await newTab.save();
+//     res.status(201).json({ message: "Tab created successfully", tab: savedTab });
+//   } catch (error: any) {
+//     console.error("Error creating tab:", error);
+//     res.status(500).json({ error: "Failed to create tab", details: error.message });
+//   }
+// });
 
 app.put("/api/tabs/:tabId", async (req: Request, res: Response) => {
   const tabId = req.params.tabId;
