@@ -330,7 +330,7 @@ app.post('/api/tabs', async (req: Request, res: Response) => {
 
     // Create and save the new tab
     const newTab = new Tab({
-      customer_id,
+      customer_id, // This will be the user account ID
       customer_name,
       tabItems,
     });
