@@ -321,27 +321,56 @@ app.put("/api/tabs/:tabId", async (req: Request, res: Response) => {
   }
 });
 app.post('/api/tabs', async (req: Request, res: Response) => {
+  const { customer_id, customer_name, tabItems } = req.body;
+
+  // Check for top-level required fields (customer_id, customer_name, tabItems)
+  if (!customer_id || !customer_name || !Array.isArray(tabItems)) {
+    return res.status(400).json({
+      message: 'Missing required fields: customer_id, customer_name, or tabItems must be an array.',
+    });
+  }
+
+  // Default values for optional fields
+  const fallbackCustomerName = customer_name || 'Unknown Customer';
+  
+  // Process each tab item and apply fallback data
+  const updatedTabItems = tabItems.map(item => {
+    return {
+      product_id: item.product_id || 'default-product-id',  // Fallback for missing product_id
+      product_name: item.product_name || 'Default Product',  // Fallback for missing product_name
+      price: item.price ?? 0,  // Default price to 0 if missing or invalid
+      quantity: item.quantity ?? 1,  // Default quantity to 1 if missing
+    };
+  });
+
+  // Check if any required fields are missing from each tab item (using the processed tab items)
+  const missingFields = updatedTabItems.filter(item => {
+    return !item.product_id || !item.product_name || item.price === undefined || item.quantity === undefined;
+  });
+
+  if (missingFields.length > 0) {
+    return res.status(400).json({
+      message: 'Each tabItem must include: product_id, product_name, price, and quantity.',
+    });
+  }
+
   try {
-    const { customer_id, customer_name, tabItems } = req.body;
-
-    if (!customer_id || !customer_name || !tabItems) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    // Create and save the new tab
+    // Create a new tab with the fallback data
     const newTab = new Tab({
-      customer_id, // This will be the user account ID
-      customer_name,
-      tabItems,
+      customer_id,
+      customer_name: fallbackCustomerName,
+      tabItems: updatedTabItems,
     });
 
-    await newTab.save();
-    res.status(201).json(newTab); // Respond with the created tab
-  } catch (error) {
-    console.error('Error saving tab:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
+    // Save the tab to the database
+    const savedTab = await newTab.save();
+    res.status(201).json(savedTab);
+  } catch (err) {
+    console.error('Error saving tab:', err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 
 
 app.get('/api/tabs/:tabId', async (req: Request, res: Response) => {
