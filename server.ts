@@ -322,6 +322,7 @@ app.put("/api/tabs/:tabId", async (req: Request, res: Response) => {
 });
 app.post('/api/tabs', async (req: Request, res: Response) => {
   const { customer_id, customer_name, tabItems } = req.body;
+  console.log("Received tab data:", { customer_id, customer_name, tabItems });
   // Check for top-level required fields (customer_id, customer_name, tabItems)
   if (!customer_id || !customer_name || !Array.isArray(tabItems)) {
     return res.status(400).json({
