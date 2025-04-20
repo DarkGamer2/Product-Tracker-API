@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 dotenv.config();
 mongoose.connect(`${process.env.MONGO_URI}`)
 const productSchema = new Schema({
-    product_id: { type: mongoose.Schema.Types.ObjectId, required: true },
+    product_id: { type: String, required: true },
     product_name: { type: String, required: true },
     price: { type: Number, required: true },
     quantity: { type: Number, required: true },
