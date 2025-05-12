@@ -12,7 +12,8 @@ import mongoose from 'mongoose';
 import Report from './models/Feedback';
 import Tab from './models/Tab';
 import { TabItem } from './interfaces/interface'; // Assuming you have this interface
-
+import jwt from "jsonwebtoken";
+import "./auth/jwtConfig";
 const app = express();
 const port = process.env.PORT || 3000;
 app.use(cors());
@@ -119,18 +120,27 @@ app.post("/api/register", async (req: Request, res: Response) => {
 });
 
 app.post('/api/login', (req: Request, res: Response, next: NextFunction) => {
-  passport.authenticate("local", (err: Error, user: userInterface, info: any, message: string) => {
-    if (err) {
-      return next(err);
-    }
+  passport.authenticate("local", { session: false }, (err: Error, user: userInterface, info: any) => {
+    if (err) return next(err);
     if (!user) {
-      return res.status(401).json({ err: "No user exists!" }); // Send JSON response
+      return res.status(401).json({ error: "Invalid credentials" });
     }
-    req.logIn(user, (err) => {
-      if (err) {
-        return next(err);
-      }
-      return res.status(200).json({ message: "User logged in successfully!" }); // Send JSON response
+
+    // ✅ Generate JWT
+    const payload = {
+      id: user.id,
+      username: user.username,
+      isAdmin: user.isAdmin,
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET || "your_jwt_secret", {
+      expiresIn: "1h",
+    });
+
+    // ✅ Send token back to client
+    return res.status(200).json({
+      message: "Login successful",
+      token,
     });
   })(req, res, next);
 });
@@ -143,6 +153,10 @@ app.post('/api/logout', (req: Request, res: Response) => {
     return res.status(200).send("User logged out successfully");
   });
   res.status(200).json({ message: "User logged out successfully!" }); // Send JSON response
+});
+
+app.get("/api/protected", passport.authenticate("jwt", { session: false }), (req, res) => {
+  res.json({ message: "This is a protected route", user: req.user });
 });
 
 app.get('/api/customers', async (req: Request, res: Response) => {
