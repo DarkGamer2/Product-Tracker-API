@@ -1,49 +1,59 @@
-import express, { NextFunction, Request, Response } from 'express';
+import express, { NextFunction, Request, Response } from "express";
 import Product from "./models/Product";
 import User from "./models/User";
-import { productInterface, userInterface } from './interfaces/interface';
+import { productInterface, userInterface } from "./interfaces/interface";
 import bcrypt from "bcryptjs";
 import cors from "cors";
 import expressSession from "express-session";
-import cookieParser from 'cookie-parser';
-import passport from 'passport';
+import cookieParser from "cookie-parser";
+import passport from "passport";
 import path from "path";
-import mongoose from 'mongoose';
-import Report from './models/Feedback';
-import Tab from './models/Tab';
-import { TabItem } from './interfaces/interface'; // Assuming you have this interface
+import mongoose from "mongoose";
+import Report from "./models/Feedback";
+import Tab from "./models/Tab";
+import { TabItem } from "./interfaces/interface"; // Assuming you have this interface
 import jwt from "jsonwebtoken";
 import "./auth/jwtConfig";
+import Company from "./models/Company";
+import rateLimit from "express-rate-limit";
+import { body, validationResult } from "express-validator";
+// Implement rate limiting
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: "Too many requests, please try again later.",
+});
+
 const app = express();
+// Apply the rate limiting middleware to all API requests
+app.use("/api/", apiLimiter);
+
+// Implement PayPal payment
+// Implement commercialized endpoints for product management for businesses
+// Add SKU support for products
+
+// Extend express-session to include 'user' property
+declare module "express-session" {
+  interface SessionData {
+    user?: { username: string };
+  }
+}
+
 const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(expressSession({
-  secret: 'your_secret_key',
-  resave: false,
-  saveUninitialized: true
-}));
+app.use(
+  expressSession({
+    secret: "your_secret_key",
+    resave: false,
+    saveUninitialized: true,
+  })
+);
 app.use(passport.initialize());
 app.use(passport.session());
 require("./auth/passportConfig")(passport);
 app.use(cookieParser("secret_code"));
-
-// Assuming you have this interface defined in interfaces/interface.ts
-// export interface productInterface {
-//     productName: string;
-//     productPrice: number;
-//     productImage: string;
-// }
-
-// export interface userInterface {
-//     username: string | null;
-//     password: string | null;
-//     email: string | null;
-//     id: string;
-//     isAdmin?:boolean,
-//     mobileNumber:string
-// }
 
 // admin initlization
 async function ensureTestAdmin() {
@@ -69,83 +79,61 @@ function adminOnly(req: any, res: Response, next: NextFunction) {
   }
 }
 
-// app.get('/products/:barcode', (req, res) => {
-//   const { barcode } = req.params;
-//   const product = products[barcode];
-//   if (product) {
-//     res.json(product);
-//   } else {
-//     res.status(404).json({ error: 'Product not found' });
-//   }
-// });
-
 app.get("/", (req: Request, res: Response) => {
   res.send("API is working as expected");
 });
 
-// app.post('/api/products', (req: Request, res: Response) => {
-//     const product = new Product(req.body);
-//     product.save();
-//     res.send(200);
-// });
+app.post(
+  "/api/register",
+  [
+    body("username").notEmpty().withMessage("Username is required"),
+    body("password").notEmpty().withMessage("Password is required"),
+    body("email").isEmail().withMessage("Valid email is required"),
+    body("mobileNumber").notEmpty().withMessage("Mobile number is required"),
+  ],
+  async (req: Request, res: Response) => {
+    const { username, password, email, mobileNumber } = req.body;
 
-app.post("/api/register", async (req: Request, res: Response) => {
-  const { username, password, email, mobileNumber } = req.body;
-
-  // Check for missing fields
-  if (!username || !password || !email || !mobileNumber) {
-    return res.status(400).json({ error: "All fields are required: username, password, email, mobileNumber" });
-  }
-
-  try {
-    const existingUser = await User.findOne({ username });
-    if (existingUser) {
-      return res.status(400).json({ error: "User with that username already exists" });
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({
-      username,
-      password: hashedPassword,
-      email,
-      mobileNumber
-    });
-
-    await newUser.save();
-    res.status(200).json({ message: "User registered successfully" });
-  } catch (error) {
-    console.error("Registration Error:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-app.post('/api/login', (req: Request, res: Response, next: NextFunction) => {
-  passport.authenticate("local", { session: false }, (err: Error, user: userInterface, info: any) => {
-    if (err) return next(err);
-    if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
+    // Check for missing fields
+    if (!username || !password || !email || !mobileNumber) {
+      return res.status(400).json({
+        error:
+          "All fields are required: username, password, email, mobileNumber",
+      });
     }
 
-    // ✅ Generate JWT
-    const payload = {
-      id: user.id,
-      username: user.username,
-      isAdmin: user.isAdmin,
-    };
+    try {
+      const existingUser = await User.findOne({ username });
+      if (existingUser) {
+        return res
+          .status(400)
+          .json({ error: "User with that username already exists" });
+      }
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET || "your_jwt_secret", {
-      expiresIn: "1h",
-    });
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser = new User({
+        username,
+        password: hashedPassword,
+        email,
+        mobileNumber,
+      });
 
-    // ✅ Send token back to client
-    return res.status(200).json({
-      message: "Login successful",
-      token,
-    });
-  })(req, res, next);
-});
+      await newUser.save();
+      res.status(200).json({ message: "User registered successfully" });
+    } catch (error) {
+      console.error("Registration Error:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
+);
 
-app.post('/api/logout', (req: Request, res: Response) => {
+app.post("/api/logout", (req: Request, res: Response) => {
   req.logOut((err: Error) => {
     if (err) {
       return res.status(500).send("Internal Server Error");
@@ -155,27 +143,34 @@ app.post('/api/logout', (req: Request, res: Response) => {
   res.status(200).json({ message: "User logged out successfully!" }); // Send JSON response
 });
 
-app.get("/api/protected", passport.authenticate("jwt", { session: false }), (req, res) => {
-  res.json({ message: "This is a protected route", user: req.user });
-});
+app.get(
+  "/api/protected",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    res.json({ message: "This is a protected route", user: req.user });
+  }
+);
 
-app.get('/api/customers', async (req: Request, res: Response) => {
+app.get("/api/customers", async (req: Request, res: Response) => {
   try {
     // Fetch all users
     const users = await User.find().lean().exec();
 
     // Transform documents to match userInterface
-    const transformedUsers: userInterface[] = users.map(user => ({
+    const transformedUsers: userInterface[] = users.map((user) => ({
       username: user.username ?? null,
       password: user.password ?? null,
       email: user.email ?? null,
       id: user._id.toString(),
       mobileNumber: user.mobileNumber,
-      isAdmin: user.isAdmin // Convert _id to string
+      companyId: (user as any).companyId
+        ? (user as any).companyId.toString()
+        : "", // Ensure companyId is a string
+      isAdmin: user.isAdmin, // Convert _id to string
     }));
 
     if (transformedUsers.length === 0) {
-      return res.status(404).send('No users found.');
+      return res.status(404).send("No users found.");
     }
 
     // Send the array of users
@@ -183,17 +178,17 @@ app.get('/api/customers', async (req: Request, res: Response) => {
   } catch (err) {
     // Handle errors
     console.error(err);
-    res.status(500).send('Error on the server.');
+    res.status(500).send("Error on the server.");
   }
 });
 
-app.post('/api/customers', async (req: Request, res: Response) => {
+app.post("/api/customers", async (req: Request, res: Response) => {
   try {
     // Check if user already exists
     const existingUser = await User.findOne({ email: req.body.email }).exec();
 
     if (existingUser) {
-      return res.status(400).send('User already exists.');
+      return res.status(400).send("User already exists.");
     }
 
     // Hash the password
@@ -211,43 +206,56 @@ app.post('/api/customers', async (req: Request, res: Response) => {
     const savedUser = await newUser.save();
 
     // Respond with success message and user data
-    res.json({ message: 'User created successfully', user: savedUser });
+    res.json({ message: "User created successfully", user: savedUser });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Error on the server.');
+    res.status(500).send("Error on the server.");
   }
 });
 
-app.post('/api/products/addProduct', adminOnly, async (req: Request, res: Response) => {
-  const { productName, productPrice, productImage } = req.body;
-  if (!productName || typeof productPrice !== 'number' || !productImage) {
-    return res.status(400).json({ error: 'Product name, price, and image are required.' });
+app.post(
+  "/api/products/addProduct",
+  adminOnly,
+  [
+    body("productName").notEmpty().withMessage("Product name is required"),
+    body("productPrice")
+      .isNumeric()
+      .withMessage("Product price must be a number"),
+    body("productImage").notEmpty().withMessage("Product image is required"),
+    body("productDescription")
+      .optional()
+      .isString()
+      .withMessage("Product description must be a string"),
+  ],
+  async (req: Request, res: Response) => {
+    const { productName, productPrice, productImage } = req.body;
+    if (!productName || typeof productPrice !== "number" || !productImage) {
+      return res
+        .status(400)
+        .json({ error: "Product name, price, and image are required." });
+    }
+    const newProduct = new Product({
+      productName,
+      productPrice,
+      productImage,
+    });
+    try {
+      const savedProduct = await newProduct.save();
+      res.json({
+        message: "Product added successfully",
+        product: savedProduct,
+      });
+      console.log(savedProduct);
+    } catch (error: any) {
+      console.error("Error adding product:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to add product", details: error.message });
+    }
   }
-  const newProduct = new Product({
-    productName,
-    productPrice,
-    productImage,
-  });
-  try {
-    const savedProduct = await newProduct.save();
-    res.json({ message: 'Product added successfully', product: savedProduct });
-    console.log(savedProduct);
-  } catch (error: any) {
-    console.error('Error adding product:', error);
-    res.status(500).json({ error: 'Failed to add product', details: error.message });
-  }
-});
+);
 
-app.get('/api/products', async (req: Request, res: Response) => {
-  try {
-    const products = await Product.find({}).exec();
-    res.json(products);
-  } catch (err) {
-    res.status(500).send(err);
-  }
-});
-
-app.get('/api/users/:id', async (req: Request, res: Response) => {
+app.get("/api/users/:userId", async (req: Request, res: Response) => {
   try {
     const user = await User.findById(req.params.id).exec();
     if (!user) {
@@ -259,52 +267,33 @@ app.get('/api/users/:id', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/tabs/customer/:customerId', async (req: Request, res: Response) => {
-  const customerId = req.params.customerId;
+app.get(
+  "/api/tabs/customer/:customerId",
+  async (req: Request, res: Response) => {
+    const customerId = req.params.customerId;
 
-  if (!mongoose.Types.ObjectId.isValid(customerId)) {
-    return res.status(400).json({ error: "Invalid customer ID" });
-  }
-
-  try {
-    const tab = await Tab.findOne({ customer_id: customerId }).exec();
-    if (tab) {
-      res.json(tab);
-    } else {
-      res.status(200).json({ message: "No existing tab found for this customer", tab: null }); // Return null if not found
+    if (!mongoose.Types.ObjectId.isValid(customerId)) {
+      return res.status(400).json({ error: "Invalid customer ID" });
     }
-  } catch (error: any) {
-    console.error('Error fetching tab:', error);
-    res.status(500).json({ error: 'Internal server error', details: error.message });
+
+    try {
+      const tab = await Tab.findOne({ customer_id: customerId }).exec();
+      if (tab) {
+        res.json(tab);
+      } else {
+        res.status(200).json({
+          message: "No existing tab found for this customer",
+          tab: null,
+        }); // Return null if not found
+      }
+    } catch (error: any) {
+      console.error("Error fetching tab:", error);
+      res
+        .status(500)
+        .json({ error: "Internal server error", details: error.message });
+    }
   }
-});
-
-// app.post("/api/tabs", async (req: Request, res: Response) => {
-//   const { customerId, tabItems } = req.body;
-
-//   if (!customerId) {
-//     return res.status(400).json({ error: "Customer ID is required" });
-//   }
-//   if (!mongoose.Types.ObjectId.isValid(customerId)) {
-//     return res.status(400).json({ error: "Invalid customer ID" });
-//   }
-//   if (!tabItems || !Array.isArray(tabItems)) {
-//     return res.status(400).json({ error: "tabItems must be an array" });
-//   }
-
-//   try {
-//     const newTab = new Tab({
-//       customer_id: customerId,
-//       tabItems: tabItems,
-//     });
-
-//     const savedTab = await newTab.save();
-//     res.status(201).json({ message: "Tab created successfully", tab: savedTab });
-//   } catch (error: any) {
-//     console.error("Error creating tab:", error);
-//     res.status(500).json({ error: "Failed to create tab", details: error.message });
-//   }
-// });
+);
 
 app.put("/api/tabs/:tabId", async (req: Request, res: Response) => {
   const tabId = req.params.tabId;
@@ -331,40 +320,49 @@ app.put("/api/tabs/:tabId", async (req: Request, res: Response) => {
     res.json({ message: "Tab updated successfully", tab: updatedTab });
   } catch (error: any) {
     console.error("Error updating tab:", error);
-    res.status(500).json({ error: "Failed to update tab", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to update tab", details: error.message });
   }
 });
-app.post('/api/tabs', async (req: Request, res: Response) => {
+app.post("/api/tabs", async (req: Request, res: Response) => {
   const { customer_id, customer_name, tabItems } = req.body;
   console.log("Received tab data:", { customer_id, customer_name, tabItems });
   // Check for top-level required fields (customer_id, customer_name, tabItems)
   if (!customer_id || !customer_name || !Array.isArray(tabItems)) {
     return res.status(400).json({
-      message: 'Missing required fields: customer_id, customer_name, or tabItems must be an array.',
+      message:
+        "Missing required fields: customer_id, customer_name, or tabItems must be an array.",
     });
   }
 
   // Default values for optional fields
-  const fallbackCustomerName = customer_name || 'Unknown Customer';
-  
+  const fallbackCustomerName = customer_name || "Unknown Customer";
+
   // Process each tab item and apply fallback data
-  const updatedTabItems = tabItems.map(item => {
+  const updatedTabItems = tabItems.map((item) => {
     return {
-      product_id: item.product_id || 'default-product-id',  // Fallback for missing product_id
-      product_name: item.product_name || 'Default Product',  // Fallback for missing product_name
-      price: item.price ?? 0,  // Default price to 0 if missing or invalid
-      quantity: item.quantity ?? 1,  // Default quantity to 1 if missing
+      product_id: item.product_id || "default-product-id", // Fallback for missing product_id
+      product_name: item.product_name || "Default Product", // Fallback for missing product_name
+      price: item.price ?? 0, // Default price to 0 if missing or invalid
+      quantity: item.quantity ?? 1, // Default quantity to 1 if missing
     };
   });
 
   // Check if any required fields are missing from each tab item (using the processed tab items)
-  const missingFields = updatedTabItems.filter(item => {
-    return !item.product_id || !item.product_name || item.price === undefined || item.quantity === undefined;
+  const missingFields = updatedTabItems.filter((item) => {
+    return (
+      !item.product_id ||
+      !item.product_name ||
+      item.price === undefined ||
+      item.quantity === undefined
+    );
   });
 
   if (missingFields.length > 0) {
     return res.status(400).json({
-      message: 'Each tabItem must include: product_id, product_name, price, and quantity.',
+      message:
+        "Each tabItem must include: product_id, product_name, price, and quantity.",
     });
   }
 
@@ -380,31 +378,31 @@ app.post('/api/tabs', async (req: Request, res: Response) => {
     const savedTab = await newTab.save();
     res.status(201).json(savedTab);
   } catch (err) {
-    console.error('Error saving tab:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("Error saving tab:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
-
-
-app.get('/api/tabs/:tabId', async (req: Request, res: Response) => {
+app.get("/api/tabs/:tabId", async (req: Request, res: Response) => {
   const { tabId } = req.params;
 
   try {
-    const tab = await Tab.findOne({ customer_id: new mongoose.Types.ObjectId(tabId) });
+    const tab = await Tab.findOne({
+      customer_id: new mongoose.Types.ObjectId(tabId),
+    });
 
     if (!tab) {
-      return res.status(404).json({ message: 'Tab not found' });
+      return res.status(404).json({ message: "Tab not found" });
     }
 
     return res.status(200).json(tab);
   } catch (error) {
-    console.error('Error fetching tab:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    console.error("Error fetching tab:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 });
 
-app.get('/api/products/:barcode', async (req: Request, res: Response) => {
+app.get("/api/products/:barcode", async (req: Request, res: Response) => {
   const barcode = req.params.barcode;
 
   try {
@@ -413,88 +411,293 @@ app.get('/api/products/:barcode', async (req: Request, res: Response) => {
     if (product) {
       res.json({ product });
     } else {
-      res.status(404).json({ message: 'Product not found' });
+      res.status(404).json({ message: "Product not found" });
     }
   } catch (error) {
-    console.error('Error fetching product by barcode:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error fetching product by barcode:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
-app.post('/api/products/:barcode', async (req: Request, res: Response) => {
+app.post("/api/products/:barcode", async (req: Request, res: Response) => {
   const barcode = req.params.barcode;
 
   // Check if the user is authenticated
   if (!req.isAuthenticated()) {
-    return res.status(401).json({ message: 'Unauthorized: Please log in to add items to your tab.' });
+    return res.status(401).json({
+      message: "Unauthorized: Please log in to add items to your tab.",
+    });
   }
 
   // Get the current user's ID
   const userId = (req.user as userInterface)?.id || null;
 
   if (!userId) {
-    return res.status(500).json({ message: 'Could not retrieve user ID.' });
+    return res.status(500).json({ message: "Could not retrieve user ID." });
   }
 
   try {
     // ... rest of the function implementation ...
   } catch (error) {
-    console.error('Error adding product to tab:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error adding product to tab:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
-app.get('/api/products/:id', async (req: Request, res: Response) => {
-  const id = req.params.id;
-  try {
-    const product = await Product.findById(id);
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-    res.json(product);
-  } catch (err) {
-    console.error('Error fetching product:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+app.post(
+  "/api/login",
+  [
+    body("username").notEmpty().withMessage("Username is required"),
+    body("password").notEmpty().withMessage("Password is required"),
+  ],
+  (req: Request, res: Response, next: NextFunction) => {
+    passport.authenticate(
+      "local",
+      { session: false },
+      async (err: Error, user: userInterface, info: any) => {
+        if (err) return next(err);
+        if (!user) {
+          return res.status(401).json({ error: "Invalid credentials" });
+        }
 
+        // Fetch the user's companyId from the database if not already present
+        let companyId = user.companyId;
+        if (!companyId) {
+          const dbUser = await User.findById(user.id).exec();
+          companyId = (dbUser as any)?.companyId;
+        }
+
+        // ✅ Add companyId to the payload
+        const payload = {
+          id: user.id,
+          username: user.username,
+          isAdmin: user.isAdmin,
+          companyId: companyId, // Add this line
+        };
+
+        const token = jwt.sign(
+          payload,
+          process.env.JWT_SECRET || "your_jwt_secret",
+          {
+            expiresIn: "1h",
+          }
+        );
+
+        // ✅ Send token back to client
+        return res.status(200).json({
+          message: "Login successful",
+          token,
+        });
+      }
+    )(req, res, next);
+  }
+);
+app.get(
+  "/api/products",
+  passport.authenticate("jwt", { session: false }),
+  async (req: Request, res: Response) => {
+    const user = req.user as userInterface;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    try {
+      const [products, total] = await Promise.all([
+        Product.find({ companyId: user.companyId })
+          .skip(skip)
+          .limit(limit)
+          .exec(),
+        Product.countDocuments({ companyId: user.companyId }),
+      ]);
+
+      res.json({
+        products,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      });
+    } catch (err) {
+      res.status(500).send(err);
+    }
+  }
+);
+
+app.get(
+  "/api/products/category/:categoryId",
+  async (req: Request, res: Response) => {
+    const categoryId = req.params.categoryId;
+    try {
+      const products = await Product.find({ categoryId: categoryId }).exec();
+      if (products.length > 0) {
+        res.json(products);
+      } else {
+        res.status(404).json({ message: "No products found in this category" });
+      }
+    } catch (error) {
+      console.error("Error fetching products by category:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+app.get(
+  "/api/products/:id",
+  passport.authenticate("jwt", { session: false }),
+  async (req: Request, res: Response) => {
+    const companyName = req.query.companyName as string;
+    const id = req.params.id;
+
+    if (!companyName) {
+      return res
+        .status(400)
+        .json({ message: "companyName query parameter is required" });
+    }
+
+    try {
+      const company = await Company.findOne({ name: companyName });
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      const product = await Product.findOne({
+        _id: id,
+        companyId: company._id,
+      });
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      res.json(product);
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+app.put(
+  "/api/products/:id",
+  [
+    body("productName").notEmpty().withMessage("Product name is required"),
+    body("productPrice")
+      .isNumeric()
+      .withMessage("Product price must be a number"),
+    body("productImage").notEmpty().withMessage("Product image is required"),
+    body("productDescription")
+      .optional()
+      .isString()
+      .withMessage("Product description must be a string"),
+  ],
+  passport.authenticate("jwt", { session: false }),
+  async (req: Request, res: Response) => {
+    const id = req.params.id;
+    const updatedData = req.body;
+    const user = req.user as userInterface; // Make sure user.companyId is available
+
+    try {
+      const product = await Product.findById(id).exec();
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      // Restrict by company
+      if (product.companyId.toString() !== user.companyId.toString()) {
+        return res.status(403).json({ message: "Forbidden: Not your company" });
+      }
+
+      const updatedProduct = await Product.findByIdAndUpdate(id, updatedData, {
+        new: true,
+      }).exec();
+      res.json(updatedProduct);
+    } catch (error) {
+      console.error("Error updating product:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+app.delete(
+  "/api/products/:id",
+  passport.authenticate("jwt", { session: false }),
+  async (req: Request, res: Response) => {
+    const id = req.params.id;
+    const user = req.user as userInterface; // Make sure user.companyId is available
+
+    try {
+      const product = await Product.findById(id).exec();
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      // Restrict by company
+      if (product.companyId.toString() !== user.companyId.toString()) {
+        return res.status(403).json({ message: "Forbidden: Not your company" });
+      }
+
+      await Product.findByIdAndDelete(id).exec();
+      res.json({ message: "Product deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+app.get(
+  "/api/company/products",
+  passport.authenticate("jwt", { session: false }),
+  async (req: Request, res: Response) => {
+    const user = req.user as userInterface;
+    try {
+      const products = await Product.find({ companyId: user.companyId }).exec();
+      res.json(products);
+    } catch (err) {
+      res.status(500).send(err);
+    }
+  }
+);
 app.post("/api/feedback", async (req: Request, res: Response) => {
   try {
     const report = new Report(req.body);
     await report.save();
     res.sendStatus(200); // Use sendStatus to send a proper HTTP status code
-  } catch (error) { // Correctly place the catch block
+  } catch (error) {
+    // Correctly place the catch block
     console.error("Error saving feedback:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-app.put("/api/users/adminAccess", adminOnly, async (req: Request, res: Response) => {
-  try {
-    const { username } = req.body;
+app.put(
+  "/api/users/adminAccess",
+  adminOnly,
+  async (req: Request, res: Response) => {
+    try {
+      const { username } = req.body;
 
-    if (!username) {
-      return res.status(400).json({ error: "Username is required" });
+      if (!username) {
+        return res.status(400).json({ error: "Username is required" });
+      }
+
+      const user = await User.findOne({ username });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.isAdmin) {
+        return res.status(400).json({ error: "User already has admin access" });
+      }
+
+      user.isAdmin = true;
+      await user.save();
+
+      return res
+        .status(200)
+        .json({ message: "User granted admin access", user });
+    } catch (error) {
+      console.error("Error updating admin access:", error);
+      return res.status(500).json({ error: "Internal server error" });
     }
-
-    const user = await User.findOne({ username });
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    if (user.isAdmin) {
-      return res.status(400).json({ error: "User already has admin access" });
-    }
-
-    user.isAdmin = true;
-    await user.save();
-
-    return res.status(200).json({ message: "User granted admin access", user });
-  } catch (error) {
-    console.error("Error updating admin access:", error);
-    return res.status(500).json({ error: "Internal server error" });
   }
-});
+);
 
 app.post("/api/users/adminAccess", async (req: Request, res: Response) => {
   try {
@@ -514,9 +717,13 @@ app.post("/api/users/adminAccess", async (req: Request, res: Response) => {
 
     // Check if the user has admin access
     if (user.isAdmin) {
-      return res.status(200).json({ isAdmin: true, message: "User has admin access" });
+      return res
+        .status(200)
+        .json({ isAdmin: true, message: "User has admin access" });
     } else {
-      return res.status(200).json({ isAdmin: false, message: "User does not have admin access" });
+      return res
+        .status(200)
+        .json({ isAdmin: false, message: "User does not have admin access" });
     }
   } catch (error) {
     console.error("Error checking admin status:", error);
@@ -530,7 +737,9 @@ app.put("/api/users/resetPassword", async (req: Request, res: Response) => {
 
     // Validate the input
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required." });
+      return res
+        .status(400)
+        .json({ message: "Email and password are required." });
     }
 
     // Find the user by email
@@ -546,10 +755,35 @@ app.put("/api/users/resetPassword", async (req: Request, res: Response) => {
     user.password = hashedPassword;
     await user.save();
 
-    return res.status(200).json({ message: "Password has been reset successfully." });
+    return res
+      .status(200)
+      .json({ message: "Password has been reset successfully." });
   } catch (err) {
     console.error("Error during password reset request:", err);
     return res.status(500).json({ message: "Error on the server." });
+  }
+});
+
+app.get("/api/user/:username", async (req: Request, res: Response) => {
+  const { username } = req.params;
+
+  try {
+    const user = await User.find({ username: username }).exec();
+    if (!user || user.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json(user);
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.get("/api/session", (req, res) => {
+  if (req.session && req.session.user) {
+    res.json({ username: req.session.user.username });
+  } else {
+    res.status(401).json({ message: "Not logged in" });
   }
 });
 

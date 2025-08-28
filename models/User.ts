@@ -1,35 +1,31 @@
-import mongoose from "mongoose";
-import { Schema } from "mongoose";
-import dotenv from "dotenv";
+import mongoose, { Schema, Document } from 'mongoose';
 
-dotenv.config();
+export interface IUser extends Document {
+  username: string;
+  password: string;
+  email: string;
+  mobileNumber: string;
+  isAdmin: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-// Define the User schema
-const userSchema = new Schema({
-    username: { type: String, required: true }, // Add validation
-    password: { type: String, required: true },
-    email: { type: String, required: true, unique: true }, // Email should be unique
-    mobileNumber: { type: String, required: true },
-    created_at: { type: Date, default: Date.now }, 
-    isAdmin:{type:Boolean,default:false}// Set default to the current date
-});
+const userSchema = new Schema<IUser>({
+  username: { type: String, required: true },
+  password: { type: String, required: true },  // Remember to hash!
+  email: { type: String, required: true, unique: true },
+  mobileNumber: { type: String, required: true },
+  isAdmin: { type: Boolean, default: false },
+}, { timestamps: true });
 
-// Enable virtuals and transform _id to idå
 userSchema.set('toJSON', {
-    virtuals: true,
-    transform: function (doc, ret) {
-        ret.id = ret._id; // Assign _id to id
-        delete ret._id; // Remove _id from the output
-        delete ret.__v; // Optionally remove __v (version key)
-    },
+  virtuals: true,
+  transform: (_, ret) => {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    delete ret.password; // Never send password hash to client
+  },
 });
 
-// Connect to the database
-mongoose.connect(`${process.env.MONGO_URI}`, {
-    
-});
-
-// Create the User model
-const User = mongoose.model("User", userSchema);
-
-export default User;
+export default mongoose.model<IUser>('User', userSchema);

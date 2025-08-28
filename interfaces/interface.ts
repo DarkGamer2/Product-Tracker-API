@@ -12,6 +12,7 @@ export interface userInterface {
     id: string;
     isAdmin?:boolean,
     mobileNumber:string
+    companyId:string
 }
 
 export interface TabItem {

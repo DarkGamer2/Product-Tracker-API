@@ -1,25 +1,29 @@
-import { Schema } from "mongoose";
-import mongoose from "mongoose";
-import dotenv from "dotenv";
-dotenv.config();
+import mongoose, { Schema, Document } from 'mongoose';
 
-mongoose.connect(`${process.env.MONGO_URI}`)
-const adminSchema = new Schema({
-    adminUsername: { type: String, required: true }, // Add validation
-    adminPassword: { type: String, required: true },
-    adminEmail: { type: String, required: true, unique: true }, // Ensure unique email
-    adminPhoneNumber: { type: Number, required: true },
-    created_at: { type: Date, default: Date.now }, // Dynamically set current date
-});
+export interface IAdmin extends Document {
+  username: string;
+  password: string;
+  email: string;
+  phoneNumber: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-// Enable virtuals and transform _id to id
+const adminSchema = new Schema<IAdmin>({
+  username: { type: String, required: true },
+  password: { type: String, required: true }, // Hash this!
+  email: { type: String, required: true, unique: true },
+  phoneNumber: { type: String, required: true },
+}, { timestamps: true });
+
 adminSchema.set('toJSON', {
-    virtuals: true,
-    transform: function (doc, ret) {
-        ret.id = ret._id; // Replace _id with id
-        delete ret._id; // Remove _id from the output
-        delete ret.__v; // Remove the version key (__v)
-    },
+  virtuals: true,
+  transform: (_, ret) => {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    delete ret.password; // Hide password hash
+  },
 });
 
-export default adminSchema;
+export default mongoose.model<IAdmin>('Admin', adminSchema);
